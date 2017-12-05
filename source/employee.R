@@ -3,7 +3,7 @@
 library(xlsx)
 employee<-read.xlsx("data\\CaseStudy2-data.xlsx",sheetIndex = 1)
 
-### Initial Date Exploration
+### Initial Data Exploration
 
 #### Check for NAs and Nulls
 unlist(lapply(employee, function(x) any(is.na(x))))
@@ -53,7 +53,7 @@ regBest<- regsubsets(Attrition ~ Age + BusinessTravel + DailyRate +Department  +
                     ## Variables unnessesary
                     ## + Over18 + EmployeeCount + StandardHours
                     ,
-                  data = employee, nvmax = 10) 
+                  data = employee, nvmax = 5) 
 ##summary(regBest)
 plot(regBest,col = "brown",main = "Variables chosen by best selection model")
 ## From the best selection model,top 5 Variables impacting Attrition the most are: 
@@ -79,7 +79,7 @@ plot(regBack,col = "brown",main = "Variables chosen by backward selection model"
 ## From the backward selection model,top 5 Variables impacting Attrition the most are: 
 ## OverTime(Yes),MaritalStatus(Single), Age,EnvironmentSatisfaction,JobRole(Sales)
 
-## We would choose OverTime, MaritalStatus EnvironmentSatisfaction, TotalWorkingYears, Age, JobInvolvement and JobRole for further analysis.
+## We would choose OverTime, MaritalStatus, EnvironmentSatisfaction, TotalWorkingYears, Age, JobInvolvement and JobRole for further analysis.
 
 #### Plots of variables
 plot(employee$Attrition,employee$OverTime,main="Attrition vs OverTime",col=c("light blue","pink"))
@@ -95,20 +95,10 @@ plot(employee$Attrition,employee$JobRole,main="JobRole vs Attrition")
 #### Build regression model
 
 
-mylm<-lm(AttritionN ~ Age + BusinessTravel + DailyRate +Department  + DistanceFromHome + 
-           +                      EducationField + JobLevel+ JobRole +JobSatisfaction +MaritalStatus +
-           +                      MonthlyIncome + NumCompaniesWorked + OverTime + TotalWorkingYears + 
-           +                      TrainingTimesLastYear + YearsAtCompany + YearsInCurrentRole +
-           +                      YearsSinceLastPromotion + YearsWithCurrManager
-         +                     ## Variables Need further inspection 
-           +                     + EmployeeNumber + EnvironmentSatisfaction + StockOptionLevel
-         +                     + StockOptionLevel + YearsSinceLastPromotion 
-         +                     + Education + Gender + HourlyRate + JobInvolvement
-         +                     + MonthlyRate + PerformanceRating + RelationshipSatisfaction
-         +                     + WorkLifeBalance, data = employee)
+mylm<-lm(AttritionN ~ OverTimeN + MaritalStatusN + EnvironmentSatisfaction + TotalWorkingYears+ Age + JobInvolvementN + JobRoleN, data = employee)
 summary(mylm)
 
-### factors significant are: OverTimeN,MaritalStatusN,JobInvolvementN,TotalWorkingYears
+### factors significant are: OverTimeN,MaritalStatusN,EnvironmentSatisfaction,JobInvolvementN,TotalWorkingYears and Age.
 ### Select top three factors that impact atrrition the most,plot the data.
 #### The top three factors are: OverTime,EnvironmentSatisfaction,MaritalStatus
 
@@ -120,7 +110,7 @@ summary(mylm)
 mosaicplot(~Attrition + OverTime + MaritalStatus + EnvironmentSatisfaction, 
            shade = T, data = employee ,
            main = "Emploree attrition related to overtime, marital status and environment satisfaction",
-           las = 3,
+           las = 5,
            border = "chocolate",
-           off = 20
+           off = 10
 )
