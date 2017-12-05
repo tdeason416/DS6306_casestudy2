@@ -1,6 +1,6 @@
 ---
 title: "MSDS6306 CaseStudy 2"
-author: "Lu C"
+author: "Lu Cheng"
 date: "December 4, 2017"
 output: html_document
 ---
@@ -11,7 +11,7 @@ library(xlsx)
 employee<-read.xlsx("C:\\Git\\Repository\\DDS-Unit-13-CaseStudy2\\data\\CaseStudy2-data.xlsx",sheetIndex = 1)
 ```
 
-### Initial Date Exploration
+### Initial Data Exploration
 
 #### Check for NAs and Nulls
 ```{r, echo=TRUE}
