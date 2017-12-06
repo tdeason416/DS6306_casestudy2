@@ -53,7 +53,7 @@ print(sum(na_count))
 ## Sum of Employees who quit
 print(sum(data$attrition))
 ## retain ratio
-overall_ratio <- sum(items) / length(data$attrition)
+overall_ratio <- sum(na_count) / length(data$attrition)
 print(overall_ratio)
 ```
 
@@ -118,7 +118,7 @@ hist(data$percentsalaryhike)
 print(unique(data$businesstravel)) # sequential data, can be assigned nums
 print(unique(data$department)) ## Dummy for:
 ## Sales                  Research & Development Human Resources       
- Human Resources Research & Development Sales
+# Human Resources Research & Development Sales
 ##
 print(unique(data$educationfield)) ## Dummy for:
 ## Life Sciences    Other            Medical          Marketing        Technical Degree
@@ -135,6 +135,6 @@ print(unique(data$overtime)) #create dummy variable for yes overtime
 ```
 
 ```{r}
-check_corr <- function(col, label)
+#check_corr <- function(col, label)
 ```
 

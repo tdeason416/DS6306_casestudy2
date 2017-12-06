@@ -2,6 +2,8 @@ require(xlsx)
 require(psych)
 require(leaps)
 require(MASS)
+require(tidyverse)
+require(reshape2)
 ### import data
 employee<-read.xlsx('data/CaseStudy2-data.xlsx',sheetIndex = 1)
 
@@ -84,7 +86,7 @@ plot(regBack,col = "brown",main = "Variables chosen by backward selection model"
 ## We would choose OverTime, MaritalStatus, EnvironmentSatisfaction, TotalWorkingYears, Age, JobInvolvement and JobRole for further analysis.
 
 
-#### Probabilities of Attrition #### 
+#### Probabilities of value given attrition #### 
 
 attrified <- employee[employee$Attrition == 'Yes',]
 not.attrified <- employee[employee$Attrition == 'No', ]
@@ -97,19 +99,19 @@ Attrition_prop_table <- function(variable_name, data.f){
     
     #Normalize each column to sum to 1.
     prop.app <-apply(prop,2,sum)
-    return(sweep(prop, MARGIN=2,prop.app,'/'))
+    return(melt(sweep(prop, MARGIN=2,prop.app,'/')))
 }
 
 
-EnvSatTest_attrit <- Attrition_prop_table(employee, 'EnvironmentSatisfaction')
-MariStat_attrit <- Attrition_prop_table(employee, 'MaritalStatus')
+EnvSatTest_attrit <- Attrition_prop_table('EnvironmentSatisfaction',employee)
+MariStat_attrit <- Attrition_prop_table( 'MaritalStatus',employee)
 # Employees that left are most likely to be single.
-OverTime_attrit <- Attrition_prop_table(employee, 'OverTime')
-JobInvolv_attrit <- Attrition_prop_table(employee, 'JobInvolvement')
-JobRole_attrit <- Attrition_prop_table(employee, 'JobRole')
+OverTime_attrit <- Attrition_prop_table( 'OverTime',employee)
+JobInvolv_attrit <- Attrition_prop_table( 'JobInvolvement',employee)
+JobRole_attrit <- Attrition_prop_table( 'JobRole',employee)
 # We have highest relative turnover of Sales Representative. Very few Research Directors leave.
 
-AgeGroup_attrit <- Attrition_prop_table(employee, 'AgeGroups')
+AgeGroup_attrit <- Attrition_prop_table( 'AgeGroups', employee)
 # Younger employees are more likely to leave.
 table(employee[employee$Age < 26.4,'JobRole']) # Lab Tech, Research Scientist, 
 table(employee[employee$Age < 26.4 & employee$Attrition =='Yes','JobRole']) # Sales Rep, Lab Tech, Research Scientist are the jobs most often left.
@@ -123,6 +125,13 @@ plot(employee$Attrition,employee$Age, main="Attrition vs Age ")
 plot(employee$Attrition,employee$JobInvolvement,main="JobInvolvement vs Attrition")
 plot(employee$Attrition,employee$JobRole,main="JobRole vs Attrition")
 
+## 100% Stacked Bar chart
+ggplot(EST_attrit_m, aes(x=Attrition, y=value, fill= factor(EnvironmentSatisfaction))) + 
+    geom_bar(position = "fill",stat = "identity") +
+    scale_y_continuous(breaks = c(1,2,3,4)) +
+    labs(title = 'Attrition rate by\nEnvironment Satisfaction', y='Proportion of Response') +
+    guides(fill=guide_legend(title="Environment \nSatisfaction"))+
+    theme(legend.title=element_text(size = 9),plot.title=element_text(hjust=0.5))
 
 
 #### From the plots We can easliy see correlations between Attirtions and all these variables except for JobInvolvement.
