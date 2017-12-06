@@ -135,7 +135,7 @@ plot(employee$Attrition,employee$JobInvolvement,main="JobInvolvement vs Attritio
 plot(employee$Attrition,employee$JobRole,main="JobRole vs Attrition")
 
 ## 100% Stacked Bar chart
-ggplot(EST_attrit_m, aes(x=Attrition, y=value, fill= factor(EnvironmentSatisfaction))) + 
+ggplot(EnvSatTest_attrit, aes(x=Attrition, y=value, fill= factor(EnvironmentSatisfaction))) + 
     geom_bar(position = "fill",stat = "identity") +
     scale_y_continuous(breaks = c(1,2,3,4)) +
     labs(title = 'Attrition rate by\nEnvironment Satisfaction', y='Proportion of Response') +
