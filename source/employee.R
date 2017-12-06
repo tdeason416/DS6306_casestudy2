@@ -1,7 +1,9 @@
-
+require(xlsx)
+require(psych)
+require(leaps)
+require(MASS)
 ### import data
-library(xlsx)
-employee<-read.xlsx("data\\CaseStudy2-data.xlsx",sheetIndex = 1)
+employee<-read.xlsx('data/CaseStudy2-data.xlsx',sheetIndex = 1)
 
 ### Initial Data Exploration
 
@@ -28,17 +30,17 @@ employee$MaritalStatusN<-as.numeric(employee$MaritalStatus)
 employee$JobInvolvementN<-as.numeric(employee$JobInvolvement)
 employee$JobRoleN<-as.numeric(employee$JobRole)
 employee$AttritionN<-as.numeric(employee$Attrition)
+employee$AgeGroups <- cut(employee$Age, breaks = 5)
 
 ####Build Correlation matrix for all numeric variables
-library(psych)
+
 nnames<-names(Filter(is.numeric,employee))
 lowerCor(employee[,nnames])
 ####
 
 ###Run automatic methods for variable selection from the choosen variables.
 #install.packages("leaps")
-library(leaps)
-library(MASS)
+
 regBest<- regsubsets(Attrition ~ Age + BusinessTravel + DailyRate +Department  + DistanceFromHome + 
                      EducationField + JobLevel+ JobRole +JobSatisfaction +MaritalStatus +
                      MonthlyIncome + NumCompaniesWorked + OverTime + TotalWorkingYears + 
@@ -54,7 +56,7 @@ regBest<- regsubsets(Attrition ~ Age + BusinessTravel + DailyRate +Department  +
                     ## + Over18 + EmployeeCount + StandardHours
                     ,
                   data = employee, nvmax = 5) 
-##summary(regBest)
+# summary(regBest)
 plot(regBest,col = "brown",main = "Variables chosen by best selection model")
 ## From the best selection model,top 5 Variables impacting Attrition the most are: 
 ## OverTime(Yes),MaritalStatus(Single),TotalWorkingYears,EnvironmentSatisfaction,JobInvolvement
@@ -81,7 +83,38 @@ plot(regBack,col = "brown",main = "Variables chosen by backward selection model"
 
 ## We would choose OverTime, MaritalStatus, EnvironmentSatisfaction, TotalWorkingYears, Age, JobInvolvement and JobRole for further analysis.
 
-#### Plots of variables
+
+#### Probabilities of Attrition #### 
+
+attrified <- employee[employee$Attrition == 'Yes',]
+not.attrified <- employee[employee$Attrition == 'No', ]
+
+Attrition_prop_table <- function(variable_name, data.f){
+    # Generates a table containing proportion of responses for both Attrition values. This should allow us to examine values in the context of whether they attrified.
+    
+    # Generate a table containing variable/Attrition rates
+    prop <-prop.table(xtabs(as.formula(paste( '~ ',paste(variable_name, 'Attrition ', sep = ' + '))) , data=data.f))
+    
+    #Normalize each column to sum to 1.
+    prop.app <-apply(prop,2,sum)
+    return(sweep(prop, MARGIN=2,prop.app,'/'))
+}
+
+
+EnvSatTest_attrit <- Attrition_prop_table(employee, 'EnvironmentSatisfaction')
+MariStat_attrit <- Attrition_prop_table(employee, 'MaritalStatus')
+# Employees that left are most likely to be single.
+OverTime_attrit <- Attrition_prop_table(employee, 'OverTime')
+JobInvolv_attrit <- Attrition_prop_table(employee, 'JobInvolvement')
+JobRole_attrit <- Attrition_prop_table(employee, 'JobRole')
+# We have highest relative turnover of Sales Representative. Very few Research Directors leave.
+
+AgeGroup_attrit <- Attrition_prop_table(employee, 'AgeGroups')
+# Younger employees are more likely to leave.
+table(employee[employee$Age < 26.4,'JobRole']) # Lab Tech, Research Scientist, 
+table(employee[employee$Age < 26.4 & employee$Attrition =='Yes','JobRole']) # Sales Rep, Lab Tech, Research Scientist are the jobs most often left.
+
+#### Plots of variables ####
 plot(employee$Attrition,employee$OverTime,main="Attrition vs OverTime",col=c("light blue","pink"))
 plot(employee$Attrition,employee$MaritalStatus,main="Attrition vs MaritalStatus")
 plot(employee$Attrition,employee$EnvironmentSatisfaction,main="Attrition vs EnvironmentSatisfaction")
@@ -90,8 +123,10 @@ plot(employee$Attrition,employee$Age, main="Attrition vs Age ")
 plot(employee$Attrition,employee$JobInvolvement,main="JobInvolvement vs Attrition")
 plot(employee$Attrition,employee$JobRole,main="JobRole vs Attrition")
 
+
+
 #### From the plots We can easliy see correlations between Attirtions and all these variables except for JobInvolvement.
-#### We'll go ahead and create multipul linear regression model to get more evidence to determine which factors imapct Atrrition the most.
+#### We'll go ahead and create multiple linear regression model to get more evidence to determine which factors imapct Atrrition the most.
 #### Build regression model
 
 
@@ -99,7 +134,7 @@ mylm<-lm(AttritionN ~ OverTimeN + MaritalStatusN + EnvironmentSatisfaction + Tot
 summary(mylm)
 
 ### factors significant are: OverTimeN,MaritalStatusN,EnvironmentSatisfaction,JobInvolvementN,TotalWorkingYears and Age.
-### Select top three factors that impact atrrition the most,plot the data.
+### Select top three factors that impact attrition the most,plot the data.
 #### The top three factors are: OverTime,EnvironmentSatisfaction,MaritalStatus
 
 #### From the plot, we can get below facts:
