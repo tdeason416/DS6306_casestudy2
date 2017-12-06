@@ -69,7 +69,11 @@ print(sum(na_count))
 ## Sum of Employees who quit
 print(sum(data_binned$attrition))
 ## retain ratio
+<<<<<<< HEAD
 overall_ratio <- sum(data_binned$attrition) / length(data_binned$attrition)
+=======
+overall_ratio <- sum(na_count) / length(data$attrition)
+>>>>>>> 3edf48fe69d53af1d011f874a5cfa1d26f3e0a94
 print(overall_ratio)
 ```
 
@@ -156,7 +160,11 @@ hist(data$totalworkingyears)
 print(unique(data$businesstravel)) # sequential data, can be assigned nums
 print(unique(data$department)) ## Dummy for:
 ## Sales                  Research & Development Human Resources       
+<<<<<<< HEAD
 ## Human Resources Research & Development Sales
+=======
+# Human Resources Research & Development Sales
+>>>>>>> 3edf48fe69d53af1d011f874a5cfa1d26f3e0a94
 ##
 print(unique(data$educationfield)) ## Dummy for:
 ## Life Sciences    Other            Medical          Marketing        Technical Degree
@@ -172,4 +180,10 @@ print(unique(data$over18)) # there is only one level, omit this variable
 print(unique(data$overtime)) #create dummy variable for yes overtime
 ```
 
+<<<<<<< HEAD
+=======
+```{r}
+#check_corr <- function(col, label)
+```
+>>>>>>> 3edf48fe69d53af1d011f874a5cfa1d26f3e0a94
 
