@@ -1,7 +1,9 @@
 require(xlsx)
-require(psych)
+#require(psych)
 require(leaps)
 require(MASS)
+require(ggplot2)
+require(ggmosaic)
 ### import data
 employee<-read.xlsx('data/CaseStudy2-data.xlsx',sheetIndex = 1)
 
@@ -33,9 +35,8 @@ employee$AttritionN<-as.numeric(employee$Attrition)
 employee$AgeGroups <- cut(employee$Age, breaks = 5)
 
 ####Build Correlation matrix for all numeric variables
-
-nnames<-names(Filter(is.numeric,employee))
-lowerCor(employee[,nnames])
+#nnames<-names(Filter(is.numeric,employee))
+#lowerCor(employee[,nnames])
 ####
 
 ###Run automatic methods for variable selection from the choosen variables.
@@ -83,7 +84,6 @@ plot(regBack,col = "brown",main = "Variables chosen by backward selection model"
 
 ## We would choose OverTime, MaritalStatus, EnvironmentSatisfaction, TotalWorkingYears, Age, JobInvolvement and JobRole for further analysis.
 
-
 #### Probabilities of Attrition #### 
 
 attrified <- employee[employee$Attrition == 'Yes',]
@@ -114,35 +114,63 @@ AgeGroup_attrit <- Attrition_prop_table(employee, 'AgeGroups')
 table(employee[employee$Age < 26.4,'JobRole']) # Lab Tech, Research Scientist, 
 table(employee[employee$Age < 26.4 & employee$Attrition =='Yes','JobRole']) # Sales Rep, Lab Tech, Research Scientist are the jobs most often left.
 
-#### Plots of variables ####
-plot(employee$Attrition,employee$OverTime,main="Attrition vs OverTime",col=c("light blue","pink"))
-plot(employee$Attrition,employee$MaritalStatus,main="Attrition vs MaritalStatus")
-plot(employee$Attrition,employee$EnvironmentSatisfaction,main="Attrition vs EnvironmentSatisfaction")
-plot(employee$Attrition,employee$TotalWorkingYears,main="Attrition vs TotalWorkingYears")
-plot(employee$Attrition,employee$Age, main="Attrition vs Age ")
-plot(employee$Attrition,employee$JobInvolvement,main="JobInvolvement vs Attrition")
-plot(employee$Attrition,employee$JobRole,main="JobRole vs Attrition")
 
-
-
-#### From the plots We can easliy see correlations between Attirtions and all these variables except for JobInvolvement.
 #### We'll go ahead and create multiple linear regression model to get more evidence to determine which factors imapct Atrrition the most.
 #### Build regression model
-
 
 mylm<-lm(AttritionN ~ OverTimeN + MaritalStatusN + EnvironmentSatisfaction + TotalWorkingYears+ Age + JobInvolvementN + JobRoleN, data = employee)
 summary(mylm)
 
 ### factors significant are: OverTimeN,MaritalStatusN,EnvironmentSatisfaction,JobInvolvementN,TotalWorkingYears and Age.
-### Select top three factors that impact attrition the most,plot the data.
-#### The top three factors are: OverTime,EnvironmentSatisfaction,MaritalStatus
+### Select top factors that impact attrition the most,plot the data.
+#### The top factors are: OverTime,EnvironmentSatisfaction,MaritalStatus, 
+
+## Combine values in the factorss for further analysis.
+
+employee$MaritalStatusR<-as.character(employee$MaritalStatus)
+employee$MaritalStatusR[employee$MaritalStatus!="Single"]<-c("Not Single")
+
+employee$JobRoleR<-as.character(employee$JobRole)
+employee$JobRoleR[employee$MaritalStatus!="Sales"]<-c("Non Sales")
+
+employee$EnvironmentSatisfactionR<-employee$EnvironmentSatisfaction
+employee$EnvironmentSatisfactionR[employee$EnvironmentSatisfaction!=1]<-c("Medium or Higher Satisfation")
+employee$EnvironmentSatisfactionR[employee$EnvironmentSatisfaction==1]<-c("Low Satisfation")
+
+#### Plots factors
+
+bg<-ggplot(employee, aes(x=OverTime,fill=Attrition))
+bg<-bg + geom_bar(position = "fill")
+bg<-bg + scale_y_continuous(labels = scales::percent)
+bg<-bg + labs(y="Percentage", x="Over Time", title="Attrition vs OverTime")
+bg
+
+bg<-ggplot(employee, aes(x=MaritalStatusR,fill=Attrition))
+bg<-bg + geom_bar(position = "fill")
+bg<-bg + scale_y_continuous(labels = scales::percent)
+bg<-bg + labs(y="Percentage", x="MaritalStatus", title="Attrition vs MaritalStatus")
+bg
+
+bg<-ggplot(employee, aes(x=EnvironmentSatisfactionR,fill=Attrition))
+bg<-bg + geom_bar(position = "fill")
+bg<-bg + scale_y_continuous(labels = scales::percent)
+bg<-bg + labs(y="Percentage", x="Environment Satisfaction", title="Attrition vs Environment Satisfaction")
+bg
 
 #### From the plot, we can get below facts:
 #### 1. The first group has the highest turnover rates. They have the following characteristics: Work over time, single.                                
 #### 2. The second group has the high turnover rates. They have the following characteristics: Work over time, married, low satisfaction on the work environement.      
 #### 3. The third group has the high turnover rates. They have the following characteristics: Single, low satisfaction on the work environement.
 
-mosaicplot(~Attrition + OverTime + MaritalStatus + EnvironmentSatisfaction, 
+bg<-ggplot(employee)
+bg<-bg + geom_mosaic(aes( x = product(MaritalStatusR,OverTime,EnvironmentSatisfactionR),
+                          fill=Attrition)) 
+bg<-bg + theme(axis.text.x=element_text(angle=35, hjust= 1))
+bg<-bg + labs(x="Marital Status, Eviroment Satisfaction", title='divider= "hspine"')
+bg<-bg + guides(fill=guide_legend(reverse = TRUE))
+bg
+
+mosaicplot(~Attrition + OverTime + MaritalStatusR + EnvironmentSatisfactionR, 
            shade = T, data = employee ,
            main = "Emploree attrition related to overtime, marital status and environment satisfaction",
            las = 5,
