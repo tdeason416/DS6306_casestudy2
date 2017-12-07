@@ -3,7 +3,7 @@ library(tidyr)
 library(dplyr)
 library(stringr)
 
-find_percent <- function(df, label_col, num_obs){
+find_percent <- function(df, label_col, num_obs, sep='&'){
     ##find the ratio of a certian value which includes the label
     ##--------
     ##INPUTS
@@ -21,8 +21,8 @@ find_percent <- function(df, label_col, num_obs){
     sub <- df[,label_col] == TRUE
     sub_df <- df[sub,]
     for(col_val in names(num_obs)){
-        colval <- unlist(strsplit(col_val, '&'))
-        percent_pos[str_trim(col_val)] = (sum(sub_df[,colval[1]] == str_trim(colval[2]))  / num_obs[col_val])
+        colval <- unlist(strsplit(col_val, sep))
+        percent_pos[col_val] = ((sum(sub_df[,colval[1]] == colval[2]) + .0001))  / (num_obs[col_val] + .0001)
         }
     return(percent_pos)
     }
@@ -31,11 +31,11 @@ find_number_observations <- function(df, sep='&', check_na=FALSE){
     num_obs= c()
     for (col in names(data_binned)){
         if(check_na){
-            num_obs[paste(col, 'isna', sep=sep)] = sum(is.na(data[,col])) / 1470
+            num_obs[paste(col, 'isna', sep=sep)] = sum(is.na(data[,col])) / dim(df)[1]
             }
         for (value in unique(data_binned[,col]))
             {
-            num_obs[paste(str_trim(col), str_trim(value), sep=sep)] = sum(data_binned[,col] == value)
+            num_obs[paste(col, value, sep=sep)] = sum(data_binned[,col] == value)
             }
     }
     return(num_obs)
@@ -90,7 +90,7 @@ find_covariance <- function(df, items, sep='+'){
         return(covar[c(TRUE, FALSE)])
     }
 
-bin_columns <- function(data, min_size=100, num_splits=10){
+bin_columns <- function(data, min_size=100, num_splits){
     # Convert continous data into discrete catagorical data
     # by splitting continous data into equal sized (by number of members) groups.
     # --------
@@ -106,8 +106,12 @@ bin_columns <- function(data, min_size=100, num_splits=10){
     for(col in names(types)){
         if(types[[col]] == 'integer' & length(unique(data[,col])) > num_splits){
             data_binned[col] <- cut2(data[,col], m=min_size, g=num_splits)
+            data_binned[,col] = sapply(data_binned[,col], toString)
             }
+        else{
+            data_binned[,col] = sapply(data[,col], toString)}
         }
+    names(data_binned) <- sapply(names(data_binned), str_trim)
     return(data_binned)
     }
 
@@ -129,12 +133,12 @@ check_label_corelation <- function(df, label, dsep='&', sd_ratio=1){
     all_pos <- sum(df[,label] == TRUE) / dim(df)[1]
     print(all_pos)
     num_obs <- find_number_observations(df, sep=dsep)
-    percent_pos <- find_percent(df, label, num_obs)
+    percent_pos <- find_percent(df, label, num_obs, sep=dsep)
     label_frame <- data.frame(percent_pos, num_obs)
     label_frame[,'ratio_delta'] <- label_frame$percent_pos - all_pos
     not_label <- (rownames(label_frame) != paste(label, 'TRUE', sep=dsep) & rownames(label_frame) != paste(label, 'FALSE', sep=dsep)) 
     label_frame <- label_frame[not_label,]
     one_dev <- sd(label_frame[,'ratio_delta']) * sd_ratio
     label_infl <- label_frame[abs(label_frame[,'ratio_delta']) > one_dev,]
-    return(label_infl[o rder(-label_infl$ratio_delta),])
+    return(label_infl[order(-label_infl$ratio_delta),])
 }

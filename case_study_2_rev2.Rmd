@@ -45,6 +45,8 @@ names(data) <- sapply(names(data), tolower)
 data_binned <- bin_columns(data, 100, 10)
 ```
 
+
+
 * Now, lets find out the base attrition rate
 
 ```{r}
@@ -127,15 +129,9 @@ data_dummy <- make_dummy(data_binned)
 covar_30 <- find_covariance(data_dummy , rownames(over_30))
 covar_30
 ```
-```{r}
-abs(-5)
-```
 
 
 * So it looks like 62 percent of sales reps have less then 4 working years of expirence.  Younger people also were more likley to be earlier in thier carrer, Sales roles tend to have less years with thier current manager, and there are no employees who are making two seperate wages. I'd say those coorelations seem rather obvious; however, the coorealtion isn't strong enough that I would automatically remove them.  It seems safe to remove the variable for yearsatcompany.  This seems like a variable that can be well explained by others
-
-
-x
 
 
 *just for fun, let's see if we can find the most commonly correlated variables throughout the table
@@ -152,16 +148,16 @@ hist(all_covar, breaks=50)
 ```
 
 
-* It looks like most of our variables are pretty independent of the others.  It is possible the surge in perfect corelation at the top is just due to groups which have very small counts; so it's probably not worth looking much in to, but I think I would like to see some of the other items with a correlation of .8 or higher.
+* It looks like most of our variables are pretty independent of the others.  It is possible the surge in perfect corelation at the top is just due to groups which have very small counts; so it's probably not worth looking much in to, but I think I would like to see some of the other items with a correlation of .6 or higher.
 
 ```{r}
-head(all_covar[all_covar > .80 & all_covar < .999], 50)
+head(all_covar[all_covar > .60 & all_covar < .999], 50)
 sum(data_dummy[,'performancerating&3']) / 1470
 print(sum(data[,'performancerating'] == 3))
 sum(data[,'performancerating'] == 3 & data_binned[,'attrition'] == TRUE)
 ```
 
-* it seems like there's a whole lot of fields which are highly correlated with a performance rating of 3.  Perhaps this is an indicator that a performance rating of 3 is not really a good indicator for much.  In fact, it looks like 84% of all employees surveyed had a performance rating of 3.  Additionally, 16 percent of employees with a performance rating of 3 quit, which is nearly exactly in line with the population estimate.  Overall, this variable provides no information gain.
+* it seems like there's a whole lot of fields which are highly correlated with a performance rating and a work life balance of 3.  Perhaps this is an indicator that a performance rating of 3 is not really a good indicator for much.  In fact, it looks like 84% of all employees surveyed had a performance rating of 3.  Additionally, 16 percent of employees with a performance rating of 3 quit, which is nearly exactly in line with the population estimate.  Overall, this variable provides no information gain.
 
 
 * Now let's take a look at enviroment satisfaction.  This varaible is catagorized from 1-4, but I would like to convert it to a binary varaible, so I am going to look to see how it's distributed
@@ -177,7 +173,7 @@ sum(data['environmentsatisfaction'] == 4) / 1470
 
 ```{r}
 data_binned[,'environmentsatisfaction'] <- data['environmentsatisfaction'] < 3
-infl <- check_label_corelation(data_binned, 'environmentsatisfaction', '&', sd_ratio=.7)
+infl <- check_label_corelation(data_binned, 'environmentsatisfaction', '&', sd_ratio=.75)
 infl
 ```
 
@@ -197,9 +193,75 @@ sum(data['education'] == 4) / 1470
 
 
 ```{r}
+source('src/deason_functions.R')
 data_binned[,'education'] <- data['education'] > 2
-infl <- check_label_corelation(data_binned, 'education', '&', sd_ratio=.7)
+infl <- check_label_corelation(data_binned, 'education', '&', sd_ratio=.6)
 infl
 ```
 
-* The most interesting thing  here is that it seems .85% of those educated in HR have a masters degree or higher.
+
+* The most interesting thing  here is that it seems .85% of those educated in HR have a masters degree or higher.  Also interesting is the fact that highly education people have typically worked at more companies in the past.  Less suprising is that highly educated people spend more time in trainings then those with less education.
+
+```{r}
+sum(data['relationshipsatisfaction'] == 1) / 1470
+sum(data['relationshipsatisfaction'] == 2) / 1470
+sum(data['relationshipsatisfaction'] == 3) / 1470
+sum(data['relationshipsatisfaction'] == 4) / 1470
+```
+
+* Moving onto relationship satisfaction, it looks like 60% of people claim to be happy in thier relationship, so I am going to split this one up at the same place we've split the last two.  In this case we will say True if a relationship is at least a level 3 in satisfaction (or high).
+
+```{r}
+data_binned[,'relationshipsatisfaction'] <- data['relationshipsatisfaction'] > 2
+infl <- check_label_corelation(data_binned, 'relationshipsatisfaction', '&', sd_ratio=.5)
+infl
+```
+
+* Once agian human resources is right there at the top of our list both in job role, department, and education field, so apparently everyone in our test set who works in eduacation has a masters degree or higher, and is in a happy relationship.  There is also evidence that being happy in a realtionship is not corelated with how loyal you are to your job, as employees who have worked at 8 comapnies seem to be happy in thier relationship.  
+
+```{r}
+data_binned[,'relationshipsatisfaction'] <- data['relationshipsatisfaction'] > 3
+infl <- check_label_corelation(data_binned, 'relationshipsatisfaction', '&', sd_ratio=.7)
+infl
+```
+
+* An interesting observation when we only count those who give a relationship satisfaction as 'very high' is that HR dissapears from the top of our list.  Employees who are very happy in thier relationship apparently don't go to trainings, don't often get promoted, work at small companies, and are over 50.  Perhaps this is an indication that 3 is simply a baseline value people give for relationship satisfaction, and employees in Human Resources seem to avoid giving extreme answers
+
+
+
+
+```{r}
+sum(data['worklifebalance'] == 1) / 1470
+sum(data['worklifebalance'] == 2) / 1470
+sum(data['worklifebalance'] == 3) / 1470
+sum(data['worklifebalance'] == 4) / 1470
+```
+
+* Moving onto work life balance, it looks like 60% of claim to have a good work life balance, so I am not interested in them  I am interested in the two extremes; because they seem to both have a smaller group.  First I am going to look at those who have a very good work life balance.
+
+```{r}
+data_binned[,'worklifebalance'] <- data['worklifebalance'] > 3
+infl <- check_label_corelation(data_binned, 'worklifebalance', '&', sd_ratio=.7)
+infl
+```
+
+* I am begining to think this dataset was put together by the Human Resources department, because it seems to paint thier job in a favorable light.  Those with an HR job role report a strong work-life balance at twice the rate of the population.  It also seem like work life balance is easier to obtain when you are older, it isn't your first company and you are very well paid.
+
+* Let's see if the converse also applies
+
+
+```{r}
+source('src/deason_functions.R')
+data_binned[,'worklifebalance'] <- data['worklifebalance'] == 1
+infl <- check_label_corelation(data_binned, 'worklifebalance', '&', sd_ratio=1.5)
+infl
+```
+
+* Apparently a bad work life balance causes you to quit, and oddly, an education in Human Resources leads to a poor work life balance, while a job title in Human Resouces leads to a great work life balance.  medium-low wage workers seem to have a poor work life balance, and if you are jumping around jobs a lot you probably don't have a great work-life balance
+
+```{r}
+infl <- check_label_corelation(data_binned, 'worklifebalance', '&', sd_ratio=.7)
+#percent_pos = percent_pos[,'percent_pos']
+hist(percent_pos, breaks=20, main="Histogram of Coorelation between poor worklife balance and job factors")
+```
+
