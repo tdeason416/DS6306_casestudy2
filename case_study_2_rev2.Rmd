@@ -175,7 +175,6 @@ sum(data['environmentsatisfaction'] == 4) / 1470
 * It looks like 40% of all employees would rank their workplace as low or medium, and they are fairly evenly distributed; so I am going to change the environmentsatisfaction varaible so that any ratign of 1-2 is FALSE, and a rating of 3-4 is TRUE.
 
 ```{r}
-source('src/deason_functions.R')
 data_binned[,'environmentsatisfaction'] <- data['environmentsatisfaction'] < 3
 infl <- check_label_corelation(data_binned, 'environmentsatisfaction', '&', sd_ratio=.7)
 infl
@@ -197,7 +196,6 @@ sum(data['education'] == 4) / 1470
 
 
 ```{r}
-source('src/deason_functions.R')
 data_binned[,'education'] <- data['education'] > 2
 infl <- check_label_corelation(data_binned, 'education', '&', sd_ratio=.7)
 infl
