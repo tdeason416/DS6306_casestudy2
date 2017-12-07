@@ -135,7 +135,6 @@ check_label_corelation <- function(df, label, dsep='&', sd_ratio=1){
     not_label <- (rownames(label_frame) != paste(label, 'TRUE', sep=dsep) & rownames(label_frame) != paste(label, 'FALSE', sep=dsep)) 
     label_frame <- label_frame[not_label,]
     one_dev <- sd(label_frame[,'ratio_delta']) * sd_ratio
-    print(one_dev)
     label_infl <- label_frame[abs(label_frame[,'ratio_delta']) > one_dev,]
-    return(label_infl[orxder(-label_infl$ratio_delta),])
+    return(label_infl[o rder(-label_infl$ratio_delta),])
 }
