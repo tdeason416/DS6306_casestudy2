@@ -142,3 +142,18 @@ check_label_corelation <- function(df, label, dsep='&', sd_ratio=1){
     label_infl <- label_frame[abs(label_frame[,'ratio_delta']) > one_dev,]
     return(label_infl[order(-label_infl$ratio_delta),])
 }
+
+
+
+
+
+Attrition_prop_table <- function(variable_name, data.f){
+    # Generates a table containing proportion of responses for both Attrition values. This should allow us to examine values in the context of whether they attrified.
+    
+    # Generate a table containing variable/Attrition rates
+    prop <-prop.table(xtabs(as.formula(paste( '~ ',paste(variable_name, 'attrition ', sep = ' + '))) , data=data.f))
+    
+    #Normalize each column to sum to 1.
+    prop.app <-apply(prop,2,sum)
+    return(melt(sweep(prop, MARGIN=2,prop.app,'/')))
+}
