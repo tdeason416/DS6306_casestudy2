@@ -129,15 +129,6 @@ table(employee[employee$Age < 26.4,'JobRole']) # Lab Tech, Research Scientist,
 table(employee[employee$Age < 26.4 & employee$Attrition =='Yes','JobRole']) # Sales Rep, Lab Tech, Research Scientist are the jobs most often left.
 
 ##<<<<<<< HEAD
-#### Plots of variables ####
-plot(employee$Attrition,employee$OverTime,main="Attrition vs OverTime",col=c("light blue","pink"))
-plot(employee$Attrition,employee$MaritalStatus,main="Attrition vs MaritalStatus")
-plot(employee$Attrition,employee$EnvironmentSatisfaction,main="Attrition vs EnvironmentSatisfaction")
-plot(employee$Attrition,employee$TotalWorkingYears,main="Attrition vs TotalWorkingYears")
-plot(employee$Attrition,employee$Age, main="Attrition vs Age ")
-plot(employee$Attrition,employee$JobInvolvement,main="JobInvolvement vs Attrition")
-plot(employee$Attrition,employee$JobRole,main="JobRole vs Attrition")
-
 ## 100% Stacked Bar chart
 ggplot(EnvSatTest_attrit, aes(x=Attrition, y=value, fill= factor(EnvironmentSatisfaction))) + 
     geom_bar(position = "fill",stat = "identity") +
