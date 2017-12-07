@@ -167,106 +167,16 @@ plot(regBack,col = "brown",main = "Variables chosen by backward selection model"
 ```
 
 ![](MSDS6306CaseStudy2_LC_files/figure-html/unnamed-chunk-7-2.png)<!-- -->
-### From the backward selection model,top 5 Variables impacting Attrition the most are: 
-### OverTime(Yes),MaritalStatus(Single), Age,EnvironmentSatisfaction,JobRole(Sales)
-### From the best selection model,top 5 Variables impacting Attrition the most are: 
-### OverTime(Yes),MaritalStatus(Single),TotalWorkingYears,EnvironmentSatisfaction,JobInvolvement
 
-### Therefore, we would choose OverTime, MaritalStatus, EnvironmentSatisfaction, TotalWorkingYears, Age, JobInvolvement and JobRole for further analysis.
+#### From the backward selection model,top 5 Variables impacting Attrition the most are: 
+#### OverTime(Yes),MaritalStatus(Single), Age,EnvironmentSatisfaction,JobRole(Sales)
+#### From the best selection model,top 5 Variables impacting Attrition the most are: 
+#### OverTime(Yes),MaritalStatus(Single),TotalWorkingYears,EnvironmentSatisfaction,JobInvolvement
+#### Therefore, we would choose OverTime, MaritalStatus, EnvironmentSatisfaction, TotalWorkingYears, Age, JobInvolvement and JobRole for further analysis.
 
 ### 4.2 Further variance inspection 
-
-
-```r
-##<<<<<<< HEAD
-
-#### Probabilities of value given attrition #### 
-
-attrified <- employee[employee$Attrition == 'Yes',]
-not.attrified <- employee[employee$Attrition == 'No', ]
-
-Attrition_prop_table <- function(variable_name, data.f){
-    # Generates a table containing proportion of responses for both Attrition values. This should allow us to examine values in the context of whether they attrified.
-    
-    # Generate a table containing variable/Attrition rates
-    prop <-prop.table(xtabs(as.formula(paste( '~ ',paste(variable_name, 'Attrition ', sep = ' + '))) , data=data.f))
-    
-    #Normalize each column to sum to 1.
-    prop.app <-apply(prop,2,sum)
-    return(melt(sweep(prop, MARGIN=2,prop.app,'/')))
-}
-
-
-EnvSatTest_attrit <- Attrition_prop_table('EnvironmentSatisfaction',employee)
-MariStat_attrit <- Attrition_prop_table( 'MaritalStatus',employee)
-```
-### Employees that left are most likely to be single.
-
-```r
-OverTime_attrit <- Attrition_prop_table( 'OverTime',employee)
-JobInvolv_attrit <- Attrition_prop_table( 'JobInvolvement',employee)
-JobRole_attrit <- Attrition_prop_table( 'JobRole',employee)
-```
-### We have highest relative turnover of Sales Representative. Very few Research Directors leave.
-
-```r
-AgeGroup_attrit <- Attrition_prop_table( 'AgeGroups', employee)
-```
-### Younger employees are more likely to leave.
-
-```r
-table(employee[employee$Age < 26.4,'JobRole']) # Lab Tech, Research Scientist, 
-```
-
-```
-## 
-## Healthcare Representative           Human Resources 
-##                         3                         7 
-##     Laboratory Technician                   Manager 
-##                        50                         0 
-##    Manufacturing Director         Research Director 
-##                         8                         0 
-##        Research Scientist           Sales Executive 
-##                        43                        23 
-##      Sales Representative 
-##                        28
-```
-
-```r
-table(employee[employee$Age < 26.4 & employee$Attrition =='Yes','JobRole']) 
-```
-
-```
-## 
-## Healthcare Representative           Human Resources 
-##                         0                         4 
-##     Laboratory Technician                   Manager 
-##                        20                         0 
-##    Manufacturing Director         Research Director 
-##                         1                         0 
-##        Research Scientist           Sales Executive 
-##                        10                         5 
-##      Sales Representative 
-##                        16
-```
-### Sales Rep, Lab Tech, Research Scientist are the jobs most often left.
-
-```r
-##<<<<<<< HEAD
-## 100% Stacked Bar chart
-ggplot(EnvSatTest_attrit, aes(x=Attrition, y=value, fill= factor(EnvironmentSatisfaction))) + 
-    geom_bar(position = "fill",stat = "identity") +
-    scale_y_continuous(breaks = c(1,2,3,4)) +
-    labs(title = 'Attrition rate by\nEnvironment Satisfaction', y='Proportion of Response') +
-    guides(fill=guide_legend(title="Environment \nSatisfaction"))+
-    theme(legend.title=element_text(size = 9),plot.title=element_text(hjust=0.5))
-```
-
-![](MSDS6306CaseStudy2_LC_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
-
-### 4.3 We'll go ahead and create multiple linear regression model to get more evidence in order to determine which factors imapct Atrrition the most. 
-
-### Build regression model
+#### We'll go ahead and create multiple linear regression model to get more evidence in order to determine which factors imapct Atrrition the most.
+#### Build regression model
 
 ```r
 mylm<-lm(AttritionN ~ OverTimeN + MaritalStatusN + EnvironmentSatisfaction + TotalWorkingYears+ Age + JobInvolvementN + JobRoleN, data = employee)
@@ -300,11 +210,11 @@ summary(mylm)
 ## Multiple R-squared:  0.1476,	Adjusted R-squared:  0.1435 
 ## F-statistic: 36.17 on 7 and 1462 DF,  p-value: < 2.2e-16
 ```
-### factors significant are:  OverTimeN,MaritalStatusN,EnvironmentSatisfaction,JobInvolvementN,TotalWorkingYears and Age.
-### Select top 3 factors that contribut to attrition the most
-### The top 3 factors are: OverTime,EnvironmentSatisfaction,MaritalStatus, 
+#### factors significant are:  OverTimeN,MaritalStatusN,EnvironmentSatisfaction,JobInvolvementN,TotalWorkingYears and Age.
+#### Select top 3 factors that contribut to attrition the most
+#### The top 3 factors are: OverTime,EnvironmentSatisfaction,MaritalStatus, 
 
-### 4.4 Combine values in the factors for further analysis. 
+### 4.3 Combine values in the factors for further analysis. 
 
 ```r
 employee$MaritalStatusR<-as.character(employee$MaritalStatus)
@@ -313,7 +223,7 @@ employee$EnvironmentSatisfactionR<-employee$EnvironmentSatisfaction
 employee$EnvironmentSatisfactionR[employee$EnvironmentSatisfaction!=1]<-c("Medium or Higher Satisfation")
 employee$EnvironmentSatisfactionR[employee$EnvironmentSatisfaction==1]<-c("Low Satisfation")
 ```
-### 4.5 Plot the data 
+### 4.4 Plot the data 
 
 ```r
 bg<-ggplot(employee, aes(x=OverTime,fill=Attrition))
@@ -323,7 +233,7 @@ bg<-bg + labs(y="Percentage", x="Over Time", title="Attrition vs OverTime")
 bg
 ```
 
-![](MSDS6306CaseStudy2_LC_files/figure-html/unnamed-chunk-15-1.png)<!-- -->
+![](MSDS6306CaseStudy2_LC_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
 
 ```r
 bg<-ggplot(employee, aes(x=MaritalStatusR,fill=Attrition))
@@ -333,7 +243,7 @@ bg<-bg + labs(y="Percentage", x="MaritalStatus", title="Attrition vs MaritalStat
 bg
 ```
 
-![](MSDS6306CaseStudy2_LC_files/figure-html/unnamed-chunk-15-2.png)<!-- -->
+![](MSDS6306CaseStudy2_LC_files/figure-html/unnamed-chunk-10-2.png)<!-- -->
 
 ```r
 bg<-ggplot(employee, aes(x=EnvironmentSatisfactionR,fill=Attrition))
@@ -343,9 +253,9 @@ bg<-bg + labs(y="Percentage", x="Environment Satisfaction", title="Attrition vs 
 bg
 ```
 
-![](MSDS6306CaseStudy2_LC_files/figure-html/unnamed-chunk-15-3.png)<!-- -->
-### 4.6 Plot masaic plot for combing multiple factor's effection 
+![](MSDS6306CaseStudy2_LC_files/figure-html/unnamed-chunk-10-3.png)<!-- -->
 
+### 4.5 Plot masaic plot for combing multiple factor's effection 
 #### From the analysis, we can get the top 3 factors that contribuilt to a higher turnover rate of an employee:
 #### 1. Working overtime.
 #### 2. Being single.
@@ -362,7 +272,7 @@ bg<-bg + guides(fill=guide_legend(reverse = TRUE))
 bg
 ```
 
-![](MSDS6306CaseStudy2_LC_files/figure-html/unnamed-chunk-16-1.png)<!-- -->
+![](MSDS6306CaseStudy2_LC_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
 
 ```r
 mosaicplot(~Attrition + OverTime + MaritalStatusR + EnvironmentSatisfactionR, 
@@ -374,7 +284,7 @@ mosaicplot(~Attrition + OverTime + MaritalStatusR + EnvironmentSatisfactionR,
 )
 ```
 
-![](MSDS6306CaseStudy2_LC_files/figure-html/unnamed-chunk-16-2.png)<!-- -->
+![](MSDS6306CaseStudy2_LC_files/figure-html/unnamed-chunk-11-2.png)<!-- -->
 
 ## 5. Job Role Analysis. 
 
@@ -435,7 +345,7 @@ summary(lm1)
 ## Multiple R-squared:  0.02412,	Adjusted R-squared:  0.01878 
 ## F-statistic: 4.514 on 8 and 1461 DF,  p-value: 1.957e-05
 ```
-### Research Director and Sales representative shows significant difference in number of companies worked than other roles.
+#### Research Director and Sales representative shows significant difference in number of companies worked than other roles.
 
 ```r
 sub.JRNCW$JobRoleR<-as.character(sub.JRNCW$JobRole)
@@ -445,9 +355,9 @@ sub.JRNCW$JobRoleS<-as.character(sub.JRNCW$JobRole)
 sub.JRNCW$JobRoleS[sub.JRNCW$JobRoleS!="Sales Representative"]<-c("Non Sales")
 ```
 
-###Significant evidence shows that the mean number of companies that a Research Director had ever worked is greater than other roles. 
-###p-vlue=0.00017 at significant level alpha=0.05
-### 95% confidence level of how many more companies a Reseach Director had every worked is 0.5 to 1.6.
+####Significant evidence shows that the mean number of companies that a Research Director had ever worked is greater than other roles. 
+####p-vlue=0.00017 at significant level alpha=0.05
+#### 95% confidence level of how many more companies a Reseach Director had every worked is 0.5 to 1.6.
 
 ```r
 aov1<-aov(NumCompaniesWorked~JobRoleR,data = sub.JRNCW)
@@ -471,9 +381,19 @@ confint(aov1)
 ## (Intercept)               2.5036900 2.765375
 ## JobRoleRResearch Director 0.5170978 1.638837
 ```
-###Significant evidence shows that the mean number of companies that a Sales Representative had ever worked is less than other roles. 
-### p-vlue=<0.0001. at significant level alpha=0.05
-### 95% confidence level shows: The companies that a Sales Representative have ever worked is 0.5 to 1.7 less than other groups of roles.
+
+```r
+bg<-ggplot(sub.JRNCW, aes())
+bg<-bg + geom_bar(aes(x=JobRoleR, y=NumCompaniesWorked, fill = JobRoleR), 
+                  position = "dodge", stat = "summary", fun.y = "mean")
+bg
+```
+
+![](MSDS6306CaseStudy2_LC_files/figure-html/unnamed-chunk-16-1.png)<!-- -->
+
+####Significant evidence shows that the mean number of companies that a Sales Representative had ever worked is less than other roles. 
+####p-vlue=<0.0001. at significant level alpha=0.05
+####95% confidence level shows: The companies that a Sales Representative have ever worked is 0.5 to 1.7 less than other groups of roles.
 
 ```r
 aov2<-aov(NumCompaniesWorked~JobRoleS,data = sub.JRNCW)
@@ -497,18 +417,6 @@ confint(aov2)
 ## (Intercept)                   2.626134  2.8879254
 ## JobRoleSSales Representative -1.681389 -0.5796582
 ```
-###  5.5 Conclusion:  
-### From the analysis, Sales Representative workes less companies than other groups of roles and Research Director works more companies than other group of roles.
-### But this results might be impacted by confound variances. Such as , Sales Representative's Age, working years and so on. Further analysis need to proceed on the test to determine confound variables.
-
-```r
-bg<-ggplot(sub.JRNCW, aes())
-bg<-bg + geom_bar(aes(x=JobRoleR, y=NumCompaniesWorked, fill = JobRoleR), 
-                  position = "dodge", stat = "summary", fun.y = "mean")
-bg
-```
-
-![](MSDS6306CaseStudy2_LC_files/figure-html/unnamed-chunk-23-1.png)<!-- -->
 
 ```r
 bg<-ggplot(sub.JRNCW, aes())
@@ -517,4 +425,8 @@ bg<-bg + geom_bar(aes(x=JobRoleS, y=NumCompaniesWorked, fill = JobRoleS),
 bg
 ```
 
-![](MSDS6306CaseStudy2_LC_files/figure-html/unnamed-chunk-23-2.png)<!-- -->
+![](MSDS6306CaseStudy2_LC_files/figure-html/unnamed-chunk-17-1.png)<!-- -->
+
+###5.5 Conclusion:  
+####From the analysis, Sales Representative workes less companies than other groups of roles and Research Director works more companies than other group of roles.
+####But this results might be impacted by confound variances. Such as , employee's Age, working years and so on. Further analysis need to be proceeded on the data to determine confound variables.

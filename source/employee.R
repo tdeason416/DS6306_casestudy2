@@ -93,54 +93,6 @@ plot(regBack,col = "brown",main = "Variables chosen by backward selection model"
 ## OverTime(Yes),MaritalStatus(Single), Age,EnvironmentSatisfaction,JobRole(Sales)
 
 ## We would choose OverTime, MaritalStatus, EnvironmentSatisfaction, TotalWorkingYears, Age, JobInvolvement and JobRole for further analysis.
-
-##<<<<<<< HEAD
-
-#### Probabilities of value given attrition #### 
-##=======
-    #### Probabilities of Attrition #### 
-##>>>>>>> 2c17e703ca3f8f4fc0ec75bbdf0ddb4e93a5b6cc
-
-attrified <- employee[employee$Attrition == 'Yes',]
-not.attrified <- employee[employee$Attrition == 'No', ]
-
-Attrition_prop_table <- function(variable_name, data.f){
-    # Generates a table containing proportion of responses for both Attrition values. This should allow us to examine values in the context of whether they attrified.
-    
-    # Generate a table containing variable/Attrition rates
-    prop <-prop.table(xtabs(as.formula(paste( '~ ',paste(variable_name, 'Attrition ', sep = ' + '))) , data=data.f))
-    
-    #Normalize each column to sum to 1.
-    prop.app <-apply(prop,2,sum)
-    return(melt(sweep(prop, MARGIN=2,prop.app,'/')))
-}
-
-
-EnvSatTest_attrit <- Attrition_prop_table('EnvironmentSatisfaction',employee)
-MariStat_attrit <- Attrition_prop_table( 'MaritalStatus',employee)
-# Employees that left are most likely to be single.
-OverTime_attrit <- Attrition_prop_table( 'OverTime',employee)
-JobInvolv_attrit <- Attrition_prop_table( 'JobInvolvement',employee)
-JobRole_attrit <- Attrition_prop_table( 'JobRole',employee)
-# We have highest relative turnover of Sales Representative. Very few Research Directors leave.
-
-AgeGroup_attrit <- Attrition_prop_table( 'AgeGroups', employee)
-# Younger employees are more likely to leave.
-table(employee[employee$Age < 26.4,'JobRole']) # Lab Tech, Research Scientist, 
-table(employee[employee$Age < 26.4 & employee$Attrition =='Yes','JobRole']) # Sales Rep, Lab Tech, Research Scientist are the jobs most often left.
-
-##<<<<<<< HEAD
-## 100% Stacked Bar chart
-ggplot(EnvSatTest_attrit, aes(x=Attrition, y=value, fill= factor(EnvironmentSatisfaction))) + 
-    geom_bar(position = "fill",stat = "identity") +
-    scale_y_continuous(breaks = c(1,2,3,4)) +
-    labs(title = 'Attrition rate by\nEnvironment Satisfaction', y='Proportion of Response') +
-    guides(fill=guide_legend(title="Environment \nSatisfaction"))+
-    theme(legend.title=element_text(size = 9),plot.title=element_text(hjust=0.5))
-
-##=======
-##    >>>>>>> 2c17e703ca3f8f4fc0ec75bbdf0ddb4e93a5b6cc
-
 #### We'll go ahead and create multiple linear regression model to get more evidence to determine which factors imapct Atrrition the most.
 #### Build regression model
 
