@@ -69,11 +69,7 @@ print(sum(na_count))
 ## Sum of Employees who quit
 print(sum(data_binned$attrition))
 ## retain ratio
-<<<<<<< HEAD
 overall_ratio <- sum(data_binned$attrition) / length(data_binned$attrition)
-=======
-overall_ratio <- sum(na_count) / length(data$attrition)
->>>>>>> 3edf48fe69d53af1d011f874a5cfa1d26f3e0a94
 print(overall_ratio)
 ```
 
@@ -145,6 +141,40 @@ high_prob <- high_prob[hnames,]
 head(high_prob[order(-high_prob$ratio_delta),], 40)
 ```
 
+* That cluster of percent quit at 34.5% is starting to look a little suspicious, like there may be a very strong covariance within those gruops, which would make those varaibles slightly less valuable, but first we are going to have to generate our dummy varaibles across the main dataset.
+
+```{r}
+#function which asssumes all data is catagorical within the dataframe
+make_dummy <- function(df){
+  for(col in names(df)){
+    for(val in unique(df[,col])){
+      df[, paste(col, val, sep='&')] = df[, col] = val
+    }
+   df = df[, names(df) != col]
+  }
+ return(df)
+}
+#thirtyfive <- data_binned[,colnames(subset(high_prob, percent_quit > 0.33))]
+data_dummy <- make_dummy(data_binned)
+```
+
+
+```{r}
+find_covariance <- function(df){
+  covar = c()
+  for(col1 in names(df)){
+    for(col2 in names(df)){
+      covar[paste(col1, col2, sep='+')] = sum(col1 == TRUE & col2 == TRUE) / sum(col1 == TRUE)
+    }
+   df <- df[, names(df) != col]
+  }
+}
+over_34 <- subset(high_prob, percent_quit > .34)
+```
+
+
+
+
 
 ```{r}
 hist(data$percentsalaryhike)
@@ -160,12 +190,7 @@ hist(data$totalworkingyears)
 print(unique(data$businesstravel)) # sequential data, can be assigned nums
 print(unique(data$department)) ## Dummy for:
 ## Sales                  Research & Development Human Resources       
-<<<<<<< HEAD
 ## Human Resources Research & Development Sales
-=======
-# Human Resources Research & Development Sales
->>>>>>> 3edf48fe69d53af1d011f874a5cfa1d26f3e0a94
-##
 print(unique(data$educationfield)) ## Dummy for:
 ## Life Sciences    Other            Medical          Marketing        Technical Degree
 ## Default: Human Resources
@@ -180,10 +205,9 @@ print(unique(data$over18)) # there is only one level, omit this variable
 print(unique(data$overtime)) #create dummy variable for yes overtime
 ```
 
-<<<<<<< HEAD
-=======
+
 ```{r}
 #check_corr <- function(col, label)
 ```
->>>>>>> 3edf48fe69d53af1d011f874a5cfa1d26f3e0a94
+
 
