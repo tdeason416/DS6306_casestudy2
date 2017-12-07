@@ -2,6 +2,8 @@ require(xlsx)
 #require(psych)
 require(leaps)
 require(MASS)
+require(tidyverse)
+require(reshape2)
 require(ggplot2)
 require(ggmosaic)
 require(plyr)
@@ -90,37 +92,6 @@ plot(regBack,col = "brown",main = "Variables chosen by backward selection model"
 ## OverTime(Yes),MaritalStatus(Single), Age,EnvironmentSatisfaction,JobRole(Sales)
 
 ## We would choose OverTime, MaritalStatus, EnvironmentSatisfaction, TotalWorkingYears, Age, JobInvolvement and JobRole for further analysis.
-
-#### Probabilities of Attrition #### 
-
-attrified <- employee[employee$Attrition == 'Yes',]
-not.attrified <- employee[employee$Attrition == 'No', ]
-
-Attrition_prop_table <- function(variable_name, data.f){
-    # Generates a table containing proportion of responses for both Attrition values. This should allow us to examine values in the context of whether they attrified.
-    
-    # Generate a table containing variable/Attrition rates
-    prop <-prop.table(xtabs(as.formula(paste( '~ ',paste(variable_name, 'Attrition ', sep = ' + '))) , data=data.f))
-    
-    #Normalize each column to sum to 1.
-    prop.app <-apply(prop,2,sum)
-    return(sweep(prop, MARGIN=2,prop.app,'/'))
-}
-
-
-EnvSatTest_attrit <- Attrition_prop_table(employee, 'EnvironmentSatisfaction')
-MariStat_attrit <- Attrition_prop_table(employee, 'MaritalStatus')
-# Employees that left are most likely to be single.
-OverTime_attrit <- Attrition_prop_table(employee, 'OverTime')
-JobInvolv_attrit <- Attrition_prop_table(employee, 'JobInvolvement')
-JobRole_attrit <- Attrition_prop_table(employee, 'JobRole')
-# We have highest relative turnover of Sales Representative. Very few Research Directors leave.
-
-AgeGroup_attrit <- Attrition_prop_table(employee, 'AgeGroups')
-# Younger employees are more likely to leave.
-table(employee[employee$Age < 26.4,'JobRole']) # Lab Tech, Research Scientist, 
-table(employee[employee$Age < 26.4 & employee$Attrition =='Yes','JobRole']) # Sales Rep, Lab Tech, Research Scientist are the jobs most often left.
-
 
 #### We'll go ahead and create multiple linear regression model to get more evidence to determine which factors imapct Atrrition the most.
 #### Build regression model
