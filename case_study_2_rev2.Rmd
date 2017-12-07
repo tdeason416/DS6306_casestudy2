@@ -39,7 +39,8 @@ names(data) <- sapply(names(data), tolower)
 #labels <- sapply(unique(describe_data$X), tolower)
 #describe_clean <- fill(describe_data, X, .direction='up')
 #dump <- describe_data[6,1]
-is(dump)
+#is(dump)
+source('src/deason_functions.R')
 ```
 
 ```{r echo=TRUE}
@@ -104,29 +105,30 @@ ggplot(obs_stacked, aes(x = values)) +
 
 ```{r}
 ## first we will define a function to build a new data.frame which contains qutting percent and number of observations for each factor
-percent_quit = c()
-find_percent <- function(df, sub_df, col_value, num_observations)
-  {
-  colval <- unlist(strsplit(col_value, '&'))
-  return(sum(sub_df[,colval[1]] == colval[2])  / num_observations)
-}
+source('src/deason_functions.R')
+percent_pos <- find_percent(data_binned, 'attrition', num_obs)
+
+#percent_quit = c()
+#find_percent <- function(df, sub_df, col_value, num_observations)
+#  colval <- unlist(strsplit(col_value, '&'))
+#  return(sum(sub_df[,colval[1]] == colval[2])  / num_observations)
+#}
 ## Then we can iterate over all our factors and extract the data we are looking for from them
-percent_quit = c()
-sub_df <- subset(data_binned, 'attrition' == TRUE)
-for (colval in names(num_obs)){
-  percent_quit[colval] = find_percent(data_binned, sub_df, colval, num_obs[colval])}
+#percent_quit = c()
+#sub_df <- subset(data_binned, 'attrition' == TRUE)
+#for (colval in names(num_obs)){
+#  percent_quit[colval] = find_percent(data_binned, sub_df, colval, #num_obs[colval])}
 ```
 
 ```{r}
-num_observations
+percent_pos
 ```
 
 
-
 ```{r}
-print(mean(percent_quit))
-print(median(percent_quit))
-per_stacked = stack(percent_quit)
+print(mean(percent_pos))
+print(median(percent_pos))
+per_stacked = stack(percent_pos)
 ggplot(per_stacked, aes(x = values)) +
   stat_density(position="identity",geom="line")
 ```
