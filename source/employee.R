@@ -1,5 +1,5 @@
+
 require(xlsx)
-#require(psych)
 require(leaps)
 require(MASS)
 require(tidyverse)
@@ -7,6 +7,7 @@ require(reshape2)
 require(ggplot2)
 require(ggmosaic)
 require(plyr)
+
 ### import data
 employee<-read.xlsx('data/CaseStudy2-data.xlsx',sheetIndex = 1)
 
