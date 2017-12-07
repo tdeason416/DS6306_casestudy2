@@ -22,10 +22,14 @@ library(tidyr)
 library(dplyr)
 library(ggplot2)
 require(reshape2)
+require(plyr)
 data <- read.csv('data/CaseStudy2-data.csv')
+# Remove the & from the factor level
+data$Department <- revalue(data$Department, c('Human Resources' = 'Human Resources', 'Research & Development'='Research/Development', 'Sales'='Sales'))
 describe_data <- read.csv('data/CaseStudy2-descriptions.csv')
 #names(describe_data) <- (names(describe_data), tolower)
 names(data) <- sapply(names(data), tolower)
+
 ```
 ## Project Goals
 
@@ -146,6 +150,18 @@ head(high_prob[order(-high_prob$ratio_delta),], 40)
 * The next 3 highest groups are young people with little experience, both in working years and at the company. These three groups are not independent.
 * A high number of people leave at 0 years with their current manager. This could be related to inexperience/age or incompatibility with the manager.
 * People with low salaries leave at a higher rate. This again could be confounded in age/experience.
+
+It is also important to examine what factors are associated with not quitting.
+```{r}
+head(attr_frame[order(attr_frame$percent_quit),], 20)
+```
+
+* Research Directors have an incredibly low rate of attrition.
+* Employees in the highest income bracket rarely quit.
+* Employees that have worked the same role with the same manager for about a decade rarely quit.
+
+Many of these attributes are likely correlated.
+
 
 ```{r}
 #function which asssumes all data is catagorical within the dataframe
