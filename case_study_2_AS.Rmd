@@ -109,38 +109,37 @@ ggplot(obs_stacked, aes(x = values)) +
 
 ```{r}
 ## first we will define a function to build a new data.frame which contains qutting percent and number of observations for each factor
-percent_quit = c()
 find_percent <- function(df, sub_df, col_value, num_observations)
   {
   colval <- unlist(strsplit(col_value, '&'))
   return(sum(sub_df[,colval[1]] == colval[2])  / num_observations)
 }
 
-## Then we can iterate over all our factors and extract the data we are looking for from them
-percent_quit = c()
+
+percent_pos <- c()
 sub_df <- subset(data_binned, attrition == TRUE)
 for (colval in names(num_obs)){
-  percent_quit[colval] = find_percent(data_binned, sub_df, colval, num_obs[colval])}
+  percent_pos[colval] = find_percent(data_binned, sub_df, colval, num_obs[colval])}
 ```
 
 
 ```{r}
-print(mean(percent_quit))
-print(median(percent_quit))
-per_stacked = stack(percent_quit)
+print(mean(percent_pos))
+print(median(percent_pos))
+per_stacked = stack(percent_pos)
 ggplot(per_stacked, aes(x = values)) +
   stat_density(position="identity",geom="line")
 ```
 
-* Unsuprisingly, our mean value for percent_quit is exactly in line with the overall percent who quit, but the median value is notably lower, and we seem to have a small cluster of events hovering around .33% quit; which is approximitly double the standard rate
+* Unsuprisingly, our mean value for percent_pos is exactly in line with the overall percent who quit, but the median value is notably lower, and we seem to have a small cluster of events hovering around .33% quit; which is approximitly double the standard rate
 
 * Let's take a closer look at some of those varaibles
 
 ```{r}
-## move all our data into a dataframe of percent_quit verses number of observations
-attr_frame <- data.frame(percent_quit, num_obs)
-high_prob <- subset(attr_frame, percent_quit > overall_ratio)
-high_prob$ratio_delta = high_prob$percent_quit - overall_ratio
+## move all our data into a dataframe of percent_pos verses number of observations
+attr_frame <- data.frame(percent_pos, num_obs)
+high_prob <- subset(attr_frame, percent_pos > overall_ratio)
+high_prob$ratio_delta = high_prob$percent_pos - overall_ratio
 hnames <- rownames(high_prob) != 'attrition&TRUE'
 high_prob <- high_prob[hnames,]
 head(high_prob[order(-high_prob$ratio_delta),], 40)
@@ -153,7 +152,7 @@ head(high_prob[order(-high_prob$ratio_delta),], 40)
 
 It is also important to examine what factors are associated with not quitting.
 ```{r}
-head(attr_frame[order(attr_frame$percent_quit),], 20)
+head(attr_frame[order(attr_frame$percent_pos),], 20)
 ```
 
 * Research Directors have an incredibly low rate of attrition.
@@ -174,7 +173,7 @@ make_dummy <- function(df){
   }
  return(df)
 }
-#thirtyfive <- data_binned[,colnames(subset(high_prob, percent_quit > 0.33))]
+#thirtyfive <- data_binned[,colnames(subset(high_prob, percent_pos > 0.33))]
 data_dummy <- make_dummy(data_binned)
 ```
 
@@ -189,7 +188,7 @@ find_covariance <- function(df){
    df <- df[, names(df) != col]
   }
 }
-over_34 <- subset(high_prob, percent_quit > .34)
+over_34 <- subset(high_prob, percent_pos > .34)
 ```
 
 
