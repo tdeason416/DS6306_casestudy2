@@ -124,6 +124,7 @@ but first we are going to have to generate our dummy varaibles across the main d
 
 ```{r}
 # Generate covariance matrix for all high attrition attributes.
+source('src/deason_functions.R')
 over_30 <- subset(high_prob, percent_pos > .30)
 data_dummy <- make_dummy(data_binned)
 covar_30 <- find_covariance(data_dummy , rownames(over_30))

@@ -56,7 +56,7 @@ make_dummy <- function(df, sep='&'){
     dfo <- df
     for(col in names(df)){
         for(val in unique(dfo[,col])){
-            dfo[, paste(str_trim(col), str_trim(val), sep=sep)] = dfo[, col] == val
+            dfo[, paste(col, val, sep=sep)] = dfo[, col] == val
             }
         dfo = dfo[, names(dfo) != col]
         }
@@ -81,7 +81,7 @@ find_covariance <- function(df, items, sep='+'){
     for(col1 in items){
         for(col2 in items){
             if(col1 != col2){
-                covar[paste(str_trim(col1), str_trim(col2), sep='+')] = (sum(df[,col1] == TRUE & df[,col2] == TRUE) + .00001) / (max(c(sum(df[,col1] == TRUE), sum(df[,col2] == TRUE))) + .00001)
+                covar[paste(col1, col2, sep='+')] = (sum(df[,col1] == TRUE & df[,col2] == TRUE) + .00001) / (max(c(sum(df[,col1] == TRUE), sum(df[,col2] == TRUE))) + .00001)
                 }
             }
         items = items[items != col1]
