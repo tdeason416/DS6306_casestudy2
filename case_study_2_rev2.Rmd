@@ -35,10 +35,10 @@ names(data) <- sapply(names(data), tolower)
 * Provide any other interesting trends and observations from your analysis
 
 ```{r echo=TRUE }
-## this doesn't really seem needed yet... just know lower is better
-labels <- sapply(unique(describe_data$X), tolower)
-describe_clean <- fill(describe_data, X, .direction='up')
-dump <- describe_data[6,1]
+### this doesn't really seem needed yet... just know lower is better
+#labels <- sapply(unique(describe_data$X), tolower)
+#describe_clean <- fill(describe_data, X, .direction='up')
+#dump <- describe_data[6,1]
 is(dump)
 ```
 
@@ -53,7 +53,7 @@ types <- sapply(data, class)
 data_binned <- data
 for(col in names(types)){
   if(types[[col]] == 'integer' & length(unique(data[,col])) > 10){
-    data_binned[col] <- cut2(data$age, m=100, g=10)
+    data_binned[col] <- cut2(data[,col], m=100, g=10)
   }
 }
 ```
@@ -110,13 +110,17 @@ find_percent <- function(df, sub_df, col_value, num_observations)
   colval <- unlist(strsplit(col_value, '&'))
   return(sum(sub_df[,colval[1]] == colval[2])  / num_observations)
 }
-
 ## Then we can iterate over all our factors and extract the data we are looking for from them
 percent_quit = c()
-sub_df <- subset(data_binned, attrition == TRUE)
+sub_df <- subset(data_binned, 'attrition' == TRUE)
 for (colval in names(num_obs)){
   percent_quit[colval] = find_percent(data_binned, sub_df, colval, num_obs[colval])}
 ```
+
+```{r}
+num_observations
+```
+
 
 
 ```{r}
@@ -134,53 +138,106 @@ ggplot(per_stacked, aes(x = values)) +
 ```{r}
 ## move all our data into a dataframe of percent_quit verses number of observations
 attr_frame <- data.frame(percent_quit, num_obs)
+hnames <- (rownames(attr_frame) != 'attrition&TRUE' & rownames(attr_frame) != 'attrition&FALSE')
+attr_frame <- attr_frame[hnames,]
 high_prob <- subset(attr_frame, percent_quit > overall_ratio)
 high_prob$ratio_delta = high_prob$percent_quit - overall_ratio
-hnames <- rownames(high_prob) != 'attrition&TRUE'
+hnames <- (rownames(high_prob) != 'attrition&TRUE' & rownames(high_prob) != 'attrition&FALSE')
 high_prob <- high_prob[hnames,]
-head(high_prob[order(-high_prob$ratio_delta),], 40)
+head(high_prob[order(-high_prob$ratio_delta),], 20)
 ```
 
-* That cluster of percent quit at 34.5% is starting to look a little suspicious, like there may be a very strong covariance within those gruops, which would make those varaibles slightly less valuable, but first we are going to have to generate our dummy varaibles across the main dataset.
+* That cluster of percent quit at just over 30% is starting to look a little suspicious, like there may be a very strong covariance within those groups, which would make those varaibles slightly less valuable, but before we dig into covariance, we should check out if there is a strong coorelation at the other end of this dataframe
+
+
+```{r}
+head(attr_frame[order(attr_frame$percent_quit),], 20)
+```
+
+* This seems a little fishy... out of 961 research and development employees, zero of them have quit during the course of this study.  Part of the concern is that seems like an unusually low number, but it seems more suprusing that over half of the subjects surveyed in this study were in research and development.  This calls into question the sampling procedures used to collect this data.
+
+*Otherwise, the data seems to indicate that there is a very strong coorelation between employee retention and how long an employee has been in a specific role.  That and higher income, and more senior employees in their late 30s to mid 40s tend to stick around longer
+
+but first we are going to have to generate our dummy varaibles across the main dataset.
+
 
 ```{r}
 #function which asssumes all data is catagorical within the dataframe
 make_dummy <- function(df){
   for(col in names(df)){
     for(val in unique(df[,col])){
-      df[, paste(col, val, sep='&')] = df[, col] = val
+      df[, paste(col, val, sep='&')] = df[, col] == val
     }
    df = df[, names(df) != col]
   }
  return(df)
 }
-#thirtyfive <- data_binned[,colnames(subset(high_prob, percent_quit > 0.33))]
 data_dummy <- make_dummy(data_binned)
 ```
 
 
 ```{r}
-find_covariance <- function(df){
+find_covariance <- function(df, items){
   covar = c()
-  for(col1 in names(df)){
-    for(col2 in names(df)){
-      covar[paste(col1, col2, sep='+')] = sum(col1 == TRUE & col2 == TRUE) / sum(col1 == TRUE)
+  for(col1 in items){
+    for(col2 in items){
+      if(col1 != col2){
+      covar[paste(col1, col2, sep='+')] = sum(df[,col1] == TRUE & df[,col2] == TRUE) / (sum(df[,col1] == TRUE) + .00001)
+      }
     }
-   df <- df[, names(df) != col]
+  items = items[items != col1]
   }
+  return(covar)
 }
-over_34 <- subset(high_prob, percent_quit > .34)
+over_30 <- subset(high_prob, percent_quit > .30)
+covar <- find_covariance(data_dummy, rownames(over_30))
+## place parts in order
+covar <- covar[order(-covar)]
+## remove every other value (duplicates)
+covar <- covar[c(TRUE, FALSE)]
+covar
+```
+
+* So it looks like 93 percent of those who quit that had less then two years with thier manager, also had less then two years at the company.  Younger people also were more likley to be earlier in thier carrer, Sales roles tend to have less years with thier current manager, and there are no employees who are making two seperate wages. I'd say those coorelations seem rather obvious; however, the coorealtion isn't strong enough that I would automatically remove them.  It seems safe to remove the variable for yearsatcompany.  This seems like a variable that can be well explained by others
+
+
+*just for fun, let's see if we can find the most commonly correlated variables throughout the table
+
+```{r}
+all_covar <- find_covariance(data_dummy, names(data_dummy))
+## place parts in order
+all_covar <- all_covar[order(-all_covar)]
+## remove every other value (duplicates)
+all_covar <- all_covar[c(TRUE, FALSE)]
+length(all_covar)
+```
+
+* since it would be hard to look at all 10,000 covariaraiant pairs, I am going to look at the histogram to see where most pairs lie
+
+```{r}
+hist(all_covar, breaks=50)
+#covar_stacked = stack(all_covar)
+#ggplot(covar_stacked, aes(x = values)) +
+  #stat_density(position="identity",geom="line")
 ```
 
 
+* It looks like most of our variables are pretty independent of the others.  It is possible the surge in perfect corelation at the top is just due to groups which have very small counts; so it's probably not worth looking much in to, but I think I would like to see some of the other items with a correlation of .8 or higher.
 
+```{r}
+all_covar[all_covar > .90 & all_covar < .999]
+```
+
+* it seems like there's a whole lot of fields which are highly correlated with a performance rating of 3.  Perhaps this is an indicator that a performance rating of 3 is not really a good indicator for much.  In fact, it looks like 84% of all employees surveyed had a performance rating of 3
 
 
 ```{r}
-hist(data$percentsalaryhike)
-hist(data$numcompaniesworked)
-hist(data$environmentsatisfaction)
-hist(data$totalworkingyears)
+sum(data_dummy[,'performancerating&3']) / 1470
+
+#hist(data$percentsalaryhike)
+#hist(data$numcompaniesworked)
+#hist(data$environmentsatisfaction)
+#hist(data$totalworkingyears)
 ```
 
 
