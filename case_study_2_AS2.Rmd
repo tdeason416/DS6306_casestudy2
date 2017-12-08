@@ -1,6 +1,6 @@
 ---
 title: "case_study_2"
-author: "Travis Deason"
+author: "Travis Deason, Lu Cheng, and Anthony Schams"
 date: "12/4/2017"
 output: html_document
 ---
@@ -32,6 +32,7 @@ describe_data <- read.csv('data/CaseStudy2-descriptions.csv')
 #names(describe_data) <- (names(describe_data), tolower)
 names(data) <- sapply(names(data), tolower)
 ```
+
 ## Project Goals
 
 * Identify (at least) the top three factors that contribute to turnover.
@@ -48,7 +49,7 @@ data_binned <- bin_columns(data, 100, 10)
 ```
 
 
-* Now, lets find out the base attrition rate
+* Now, let's find the base attrition rate
 
 ```{r}
 na_count <- sum(is.na(data$attrition))
@@ -68,7 +69,7 @@ print(overall_ratio)
 * 237 total employees quit out of 1470 total (which is 16.122 percent)
 
 
-* Now (Since we have binned all continous values) lets treat all values as catagorical, and find out which of them have a higher then expected corelation with
+* Now (Since we have binned all continous values) lets treat all values as categorical, and find out which of them have a higher then expected corelation with
 
 * First we will create a vector which contains the lengths of all catagories, or factors
 
@@ -93,7 +94,7 @@ ggplot(per_stacked, aes(x = values)) +
   stat_density(position="identity",geom="line")
 ```
 
-* Unsuprisingly, our mean value for percent_quit is exactly in line with the overall percent who quit, but the median value is notably lower, and we seem to have a small cluster of events hovering around .33% quit; which is approximitly double the standard rate
+* Unsuprisingly, our mean value for percent_pos is exactly in line with the overall percent who quit, but the median value is notably lower, and we seem to have a small cluster of events hovering around 33% quit; which is approximately double the standard rate.
 
 * Let's take a closer look at some of those varaibles
 
@@ -114,10 +115,23 @@ head(high_prob[order(-high_prob$ratio_delta),], 20)
 * A high number of people leave at 0 years with their current manager. This could be related to inexperience/age or incompatibility with the manager.
 * People with low salaries leave at a higher rate. This again could be confounded in age/experience.
 
+Overtime is one of the variables strongly correlated with quitting. Because it is possibly the easiest to manage, we will examine it first.
+
+```{r}
+OverTime_attrit <- Attrition_prop_table( 'overtime',data)
+
+ggplot(OverTime_attrit, aes(x=attrition, y=value, fill= factor(overtime))) + 
+    geom_bar(position = "fill",stat = "identity", width = 0.7) +
+    labs(title = 'Attrition Rate by Overtime', y='Proportion of Response', x='Attrition') +
+    guides(fill=guide_legend(title="Overtime"))+
+    theme(legend.title=element_text(size = 9),plot.title=element_text(hjust=0.5))
+```
+We see that a bit over 50% of those who quit are working overtime, compared to less than 25% of those who did not quit.
+
 It is also important to examine what factors are associated with not quitting.
 
 ```{r}
-head(attr_frame[order(attr_frame$percent_pos),], 20)
+head(attr_frame[order(attr_frame$percent_pos),], 10)
 ```
 
 * Research Directors have an incredibly low rate of attrition.
@@ -126,7 +140,7 @@ head(attr_frame[order(attr_frame$percent_pos),], 20)
 
 Many of these attributes are likely correlated.
 
-but first we are going to have to generate our dummy varaibles across the main dataset.
+But first we are going to have to generate our dummy varaibles across the main dataset.
 
 
 ```{r}
@@ -139,10 +153,10 @@ covar_30
 ```
 
 
-* So it looks like 62 percent of sales reps have less then 4 working years of experience.  Younger people also were more likley to be earlier in thier carrer, Sales roles tend to have less years with thier current manager. I'd say these correlations are logical; however, the correlation isn't strong enough that I would automatically remove them.  It seems safe to remove the variable for yearsatcompany.  This seems like a variable that can be well explained by others
+* It looks like 62 percent of sales reps have less then 4 working years of experience.  Younger people also were more likley to be earlier in thier career, Sales roles tend to have less years with thier current manager. I'd say these correlations are logical; however, the correlation isn't strong enough that we would automatically remove them.  It seems safe to remove the variable for yearsatcompany.  This seems like a variable that can be well explained by others
 
 
-*just for fun, let's see if we can find the most commonly correlated variables throughout the table
+* Just for fun, let's see if we can find the most commonly correlated variables throughout the table
 
 ```{r}
 all_covar <- find_covariance(data_dummy, names(data_dummy))
@@ -178,7 +192,7 @@ years_worked_attrit <- Attrition_prop_table('totalworkingyears', data_binned)
 
 ggplot(EnvSatTest_attrit, aes(x=attrition, y=value, fill= factor(environmentsatisfaction))) + 
     geom_bar(position = "fill",stat = "identity", width = 0.7) +
-    labs(title = 'Attrition rate by\nEnvironment Satisfaction', y='Proportion of Response') +
+    labs(title = 'Attrition Rate by\nEnvironment Satisfaction', y='Proportion of Response', x='Attrition') +
     guides(fill=guide_legend(title="Environment \nSatisfaction"))+
     theme(legend.title=element_text(size = 9),plot.title=element_text(hjust=0.5))
 
@@ -192,10 +206,10 @@ It is reasonable to suspect that Environment Satisfaction is correlated with ove
 ```{r}
 data_binned[,'environmentsatisfaction'] <- data['environmentsatisfaction'] < 3
 infl <- check_label_corelation(data_binned, 'environmentsatisfaction', '&', sd_ratio=.75)
-head(infl, 10)
+head(infl)
 ```
 
-* It looks the the features most highly coorelated with environment satisfaction are a high monthly salary, having worked at one other company before, being at a company for a long time, feeling involved at your company, and having quit your job.  It seems to also help if you are a research director.
+* It looks the the features most highly correlated with environment satisfaction are a high monthly salary, having worked at one other company before, being at a company for a long time, feeling involved at your company, and having quit your job.  It seems to also help if you are a research director.
 
 
 ```{r}
@@ -216,7 +230,7 @@ head(infl, 10)
 ```
 
 
-* The most interesting thing  here is that it seems 85% of those educated in HR have similar education levels. Closer examination indicates that most of these employees have at least a Bachelor's degree.  
+* The most interesting thing  here is that it seems many employees in HR have similar education levels. Closer examination indicates that most of these employees have at least a Bachelor's degree.  
 * Similarly, working for multiple companies is correlated with education. Closer examination again indicates that these many of these employees have at least a Bachelor's degree.
 
 
@@ -252,7 +266,7 @@ head(infl)
 work_life_attrit <- Attrition_prop_table('worklifebalance', data)
 ggplot(work_life_attrit, aes(x=attrition, y=value, fill= factor(worklifebalance))) + 
     geom_bar(position = "fill",stat = "identity", width = 0.7) +
-    labs(title = 'Attrition rate by\nWork-life Balance', y='Proportion of Response') +
+    labs(title = 'Attrition Rate by\nWork-life Balance', y='Proportion of Response', x='Attrition') +
     guides(fill=guide_legend(title="Work-life \n Balance"))+
     theme(legend.title=element_text(size = 9),plot.title=element_text(hjust=0.5))
 ```
@@ -268,4 +282,8 @@ head(infl)
 * The correlation with work-life balance is not very strongly correlated with other, unlike the other variables examined.
 * Interestingly, HR again appears as the Job Role most correlated with this variable.
 
+## Conclusion
 
+* Sales representatives and young, new employees have the highest turnover.
+* A disporoportionate number of people that quit worked overtime.
+* We have a loyal employee base. People who work here a long time often stay.
