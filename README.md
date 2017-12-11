@@ -43,5 +43,5 @@ Project Goals
 -   Provide any other interesting trends and observations from your
     analysis
   
--   Attempt to Build a Linear model to predict factors import to management.
+-   Attempt to Build a Linear model to predict factors important to management.
     
