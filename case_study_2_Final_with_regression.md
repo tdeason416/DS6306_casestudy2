@@ -590,21 +590,63 @@ Linear Model For Predicting Employee Retention
 
 <!-- -->
 
-    
+```{r}
+data <- read.csv('data/CaseStudy2-data.csv')
+data$Department <- revalue(data$Department, c('Human Resources' = 'Human Resources', 'Research & Development'='Research/Development', 'Sales'='Sales'))
+describe_data <- read.csv('data/CaseStudy2-descriptions.csv')
+#names(describe_data) <- (names(describe_data), tolower)
+names(data) <- sapply(names(data), tolower)
+source('src/deason_functions.R')
+threslist <- c()
+m_perf <- c()
+att_data <- data
+att_data$attrition <- data$attrition == 'Yes'
+for(ivar in 10:95){
+  sub_df <- gen_train_frame(att_data, 'attrition')
+  reg_df <- subset_use_cols(data_binned, sub_df, 'attrition', min_qt=0.39)
+  dfd <- featurize_frame(reg_df, 'attrition')
+  fit <- lm(attrition~. , data=dfd[dfd[,'train'] == TRUE,])
+  df.te <- but_I_regress(dfd, fit, 'attrition', thres=ivar)
+  perf <- sum((df.te[,'correct']) / dim(df.te)[1])[1]
+  m_perf <- append(m_perf, perf)
+  threslist <- append(threslist, ivar)
+}
+
+out_vars <- data.frame(threslist, m_perf)
+row.names(out_vars) <- threslist
+```
 
 #### Plot of model accuracy vs percentage of variables included in the frame
 
     ##    threslist    m_perf
-    ## 82        82 0.5510204
+    ## 74        74 0.5657895
 
 ![](case_study_2_Final_with_regression_files/figure-markdown_strict/unnamed-chunk-27-1.png)
 
-   
+    
+```{r}
+varquant <- c()
+m_perf <- c()
+for(ivar in 10:95 / 100){
+  sub_df <- gen_train_frame(att_data, 'attrition')
+  reg_df <- subset_use_cols(data_binned, sub_df, 'attrition', min_qt=ivar)
+  dfd <- featurize_frame(reg_df, 'attrition')
+  #names(dfd)
+  fit <- lm(attrition~. , data=dfd[dfd[,'train'] == TRUE,])
+  df.te <- but_I_regress(dfd, fit, 'attrition', thres=74)
+  perf <- sum((df.te[,'correct']) / dim(df.te)[1])[1]
+  m_perf <- append(m_perf, perf)
+  varquant <- append(varquant, ivar)
+}
+
+vqnt.df <- data.frame(varquant, m_perf)
+row.names(vqnt.df) <- varquant
+```
 
 #### Plot of model accuracy vs threshold value
 
-    ##     varquant    m_perf
-    ## 0.3      0.3 0.5617978
+    ##      varquant    m_perf
+    ## 0.92     0.92 0.5773196
 
 ![](case_study_2_Final_with_regression_files/figure-markdown_strict/unnamed-chunk-29-1.png)
 
@@ -623,6 +665,26 @@ Linear Model For Predicting Employee Retention
 
 <!-- -->
 
+```{r}
+varquant <- c()
+m_perf <- c()
+df_ed <- data
+df_ed$education <- data$education == 4
+for(ivar in 10:95 / 100){
+  sub_df <- gen_train_frame(df_ed, 'education')
+  reg_df <- subset_use_cols(data_binned, sub_df, 'education', min_qt=ivar)
+  dfd <- featurize_frame(reg_df, 'education')
+  fit <- lm(education~. , data=dfd[dfd[,'train'] == TRUE,])
+  df.te <- but_I_regress(dfd, fit, 'education', thres=74)
+  perf <- sum((df.te[,'correct']) / dim(df.te)[1])[1]
+  m_perf <- append(m_perf, perf)
+  varquant <- append(varquant, ivar)
+}
+
+vqnt.df <- data.frame(varquant, m_perf)
+row.names(vqnt.df) <- varquant
+names(vqnt.df) <- varquant
+```
     
 
 plot of model accuracy vs percentage of variables included in the frame
@@ -630,13 +692,29 @@ plot of model accuracy vs percentage of variables included in the frame
 
 ![](case_study_2_Final_with_regression_files/figure-markdown_strict/unnamed-chunk-31-1.png)
 
-  
+```{r}
+threslist <- c()
+m_perf <- c()
+for(ivar in 10:95){
+  sub_df <- gen_train_frame(df_ed, 'education')
+  reg_df <- subset_use_cols(data_binned, sub_df, 'education', min_qt=.60)
+  dfd <- featurize_frame(reg_df, 'education')
+  fit <- lm(education~. , data=dfd[dfd[,'train'] == TRUE,])
+  df.te <- but_I_regress(dfd, fit, 'education', thres=ivar)
+  perf <- sum((df.te[,'correct']) / dim(df.te)[1])[1]
+  m_perf <- append(m_perf, perf)
+  threslist <- append(threslist, ivar)
+}
+
+out_vars <- data.frame(threslist, m_perf)
+row.names(out_vars) <- threslist
+```
 
 Plot of model accuracy vs threshold value
 -----------------------------------------
 
-    ##    threslist  m_perf
-    ## 82        82 0.59375
+    ##    threslist    m_perf
+    ## 86        86 0.5731707
 
 ![](case_study_2_Final_with_regression_files/figure-markdown_strict/unnamed-chunk-33-1.png)
 
