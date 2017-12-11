@@ -227,6 +227,7 @@ subset_use_cols <- function(df, train_frame, label, min_qt=.75, csep= '&'){
 
 Attrition_prop_table <- function(variable_name, data.f){
     # Generates a table containing proportion of responses for both Attrition values. This should allow us to examine values in the context of whether they attrified.
+    
     # Generate a table containing variable/Attrition rates
     prop <-prop.table(xtabs(as.formula(paste( '~ ',paste(variable_name, 'attrition ', sep = ' + '))) , data=data.f))
     

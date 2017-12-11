@@ -1,0 +1,665 @@
+---
+title: "MSDS 6306 Case Study 2"
+author: "Travis Deason, Lu Cheng, and Anthony Schams"
+date: "12/10/2017"
+output: md_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r, echo=FALSE, message=FALSE}
+rm( list = ls()); cat("\014")  # Clear environment
+require(stringr)
+require(plotly)
+require(Hmisc)
+require(tidyr)
+require(dplyr)
+require(ggplot2)
+require(plyr)
+require(reshape2)
+data <- read.csv('data/CaseStudy2-data.csv')
+data$Department <- revalue(data$Department, c('Human Resources' = 'Human Resources', 'Research & Development'='Research/Development', 'Sales'='Sales'))
+describe_data <- read.csv('data/CaseStudy2-descriptions.csv')
+#names(describe_data) <- (names(describe_data), tolower)
+names(data) <- sapply(names(data), tolower)
+```
+
+```{r custom_functions, echo=FALSE}
+find_percent <- function(df, label_col, num_obs, sep='&'){
+    ##find the ratio of a certian value which includes the label
+    ##--------
+    ##INPUTS
+    ##df: data.frame
+    ##    - dataframe with all catagorical data
+    ##label_col
+    ##    -   binary column of interest in df
+    ##num_obs: named.vector
+    ##     -   contains all possible values in df with the  correlated number of observations
+    ## --------
+    ## RETURNS
+    ## percent_pos: named.vector
+    ##     -   contains the percentage of each value within the dataframe which is associated with the label_column.
+    percent_pos <- c()
+    sub <- df[,label_col] == TRUE
+    sub_df <- df[sub,]
+    for(col_val in names(num_obs)){
+        colval <- unlist(strsplit(col_val, sep))
+        percent_pos[col_val] = ((sum(sub_df[,colval[1]] == colval[2]) + .0001))  / (num_obs[col_val] + .0001)
+        }
+    return(percent_pos)
+    }
+
+find_number_observations <- function(df, sep='&', check_na=FALSE){
+    num_obs= c()
+    for (col in names(data_binned)){
+        if(check_na){
+            num_obs[paste(col, 'isna', sep=sep)] = sum(is.na(data[,col])) / dim(df)[1]
+            }
+        for (value in unique(data_binned[,col]))
+            {
+            num_obs[paste(col, value, sep=sep)] = sum(data_binned[,col] == value)
+            }
+    }
+    return(num_obs)
+}
+
+make_dummy <- function(df, sep='&'){
+    # Convert dataframe with all catagorical data into all boolean dataframe
+    # --------
+    # INPUTS
+    # df: data.frame
+    #     -   Data should all be catagorical.
+    # sep: str
+    #     -   Character to use as seperator between column and value
+    # --------
+    # RETURNS
+    # dfo: data.frame
+    #     -   all data is bool
+    dfo <- df
+    for(col in names(df)){
+        for(val in unique(dfo[,col])){
+            dfo[, paste(col, val, sep=sep)] = dfo[, col] == val
+            }
+        dfo = dfo[, names(dfo) != col]
+        }
+    return(dfo)
+    }
+
+find_covariance <- function(df, items, sep='+'){
+    # Take a subset of columns in df and find the covariance between them
+    # ---------
+    # INPUTS
+    # df: data.frame
+    #     -   All data inputs must of type bool
+    # items: data.frame
+    #     -   columns in the dataframe to compare to each other
+    # sep: str
+    #     -   character to use to seperate columns being compared
+    # --------
+    # RETURNS
+    # covar: named vector
+    #     -   sets of column names seperated by sep with duplicates and self correalations removed
+    covar = c()
+    for(col1 in items){
+        for(col2 in items){
+            if(col1 != col2){
+                covar[paste(col1, col2, sep='+')] = (sum(df[,col1] == TRUE & df[,col2] == TRUE) + .00001) / (max(c(sum(df[,col1] == TRUE), sum(df[,col2] == TRUE))) + .00001)
+                }
+            }
+        items = items[items != col1]
+        }
+        covar <- covar[order(-covar)]
+        return(covar[c(TRUE, FALSE)])
+    }
+
+bin_columns <- function(data, min_size=100, num_splits){
+    # Convert continous data into discrete catagorical data
+    # by splitting continous data into equal sized (by number of members) groups.
+    # --------
+    # data: data.frame
+    #     -   data frame which contains continous data
+    # min_size: integer
+    #     -   min number of members in a group (determine split pts). columns with less discrete points then this value will be ignored.
+    # num_splits
+    #     -   number of times to split continous dataset
+    # --------
+    types <- sapply(data, class)
+    data_binned <- data
+    for(col in names(types)){
+        if(types[[col]] == 'integer' & length(unique(data[,col])) > num_splits){
+            data_binned[col] <- cut2(data[,col], m=min_size, g=num_splits)
+            data_binned[,col] = sapply(data_binned[,col], toString)
+            }
+        else{
+            data_binned[,col] = sapply(data[,col], toString)}
+        }
+    names(data_binned) <- sapply(names(data_binned), str_trim)
+    return(data_binned)
+    }
+
+check_label_corelation <- function(df, label, dsep='&', sd_ratio=1){
+## function to generate top contributing variables to a specific label
+##--------
+##INPUTS
+##df: data.frame
+##  -   contains all catagorical variables, label col must be T/F
+##label: string
+##  -   name of label column
+##sep: str
+##  -   character to use in seperating dummy values from col name
+##--------
+##RETURNS
+## coors: named_vector
+##  -   contains coorelation rate for each value in the df
+    all_pos <- sum(df[,label] == TRUE) / dim(df)[1]
+    print(all_pos)
+    num_obs <- find_number_observations(df, sep=dsep)
+    percent_pos <- find_percent(df, label, num_obs, sep=dsep)
+    label_frame <- data.frame(percent_pos, num_obs)
+    label_frame[,'ratio_delta'] <- label_frame$percent_pos - all_pos
+    not_label <- (rownames(label_frame) != paste(label, 'TRUE', sep=dsep) & rownames(label_frame) != paste(label, 'FALSE', sep=dsep)) 
+    label_frame <- label_frame[not_label,]
+    one_dev <- sd(label_frame[,'ratio_delta']) * sd_ratio
+    label_infl <- label_frame[abs(label_frame[,'ratio_delta']) > one_dev,]
+    return(label_infl[order(-label_infl$ratio_delta),])
+}
+
+Attrition_prop_table <- function(variable_name, data.f){
+    # Generates a table containing proportion of responses for both Attrition values. This should allow us to examine values in the context of whether they attrified.
+    
+    # Generate a table containing variable/Attrition rates
+    prop <-prop.table(xtabs(as.formula(paste( '~ ',paste(variable_name, 'attrition ', sep = ' + '))) , data=data.f))
+    
+    #Normalize each column to sum to 1.
+    prop.app <-apply(prop,2,sum)
+    return(melt(sweep(prop, MARGIN=2,prop.app,'/')))
+}
+```
+## Introduction
+
+We are performing exploratory data analysis for a Fortune 1000 company. We are examining employee attrition with the goal of identifying key factors that contribute to attrition. Factors that prevent attrition will also be examined. The data used was provided by the company and includes information on 1470 full-time employees.  Including attrition, a total of 35 variables were measured for each employee. All data entries were complete. (No N/A's in the dataset.) This included numeric data such as age and income as well as categorical data such as their roles and department they work in. 
+
+## Project Goals
+
+* Identify (at least) the top three factors that contribute to turnover.
+
+* Learn about any job role specific trends that may exist in the data set
+
+* Provide any other interesting trends and observations from your analysis
+
+Because we have a mix of categorical and numerical data in here, we are going to split every integer column into binned values.This will allow us to more easily compare clusters of employees to one another.
+
+```{r}
+#function defined in deason_functions.R
+data_binned <- bin_columns(data, 100, 10)
+```
+
+
+* Now, let's find the base attrition rate
+
+```{r}
+na_count <- sum(is.na(data$attrition))
+## convert data Attrition to binary
+data_binned$attrition <- data$attrition == 'Yes'
+## N/A Count
+print('Number of NA\'s in attrition column:')
+print(sum(na_count))
+## Sum of Employees who quit
+print('Number of Employees that quit:')
+print(sum(data_binned$attrition))
+attrified <- data_binned[data_binned$attrition == TRUE,]
+## retain ratio
+overall_ratio <- sum(data_binned$attrition) / length(data_binned$attrition)
+print('Ratio of Employees that quit:')
+print(overall_ratio)
+```
+
+
+* 237 total employees quit out of 1470 total (16.122 percent).
+
+* Now (Since we have binned all continous values) let's treat all values as categorical, and find out which of them have a higher than expected correlation with one another.
+
+* First we will create a vector which contains the lengths of all factor levels.
+
+```{r}
+num_obs <- find_number_observations(data_binned, sep='&')
+print('Average number of observations over all factor levels:')
+print(mean(num_obs))
+
+obs_stacked = stack(num_obs)
+print('Number of different factor levels:')
+nrow(obs_stacked)
+ggplot(obs_stacked, aes(x = values)) +
+  stat_density(position="identity",geom="line")
+```
+
+* We have 205 different factor levels with a mean of 251 observations each, and most factor levels seem to have around 170 obserations, so we are fairly well distributed.
+
+
+```{r}
+percent_pos <- find_percent(data_binned, 'attrition', num_obs)
+print('Average attrition rate for all factors:')
+print(mean(percent_pos))
+print('Median attrition rate for all factors')
+print(median(percent_pos))
+per_stacked = stack(percent_pos)
+ggplot(per_stacked, aes(x = values)) +
+  stat_density(position="identity",geom="line")
+```
+
+* Unsuprisingly, our mean value for percent_pos is exactly in line with the overall percent who quit, but the median value is notably lower, and we seem to have a small cluster of events hovering around 33% quit; which is approximately double the standard rate.
+
+* Let's take a closer look at some of those varaibles
+
+```{r}
+## move all our data into a dataframe of percent_quit verses number of observations
+attr_frame <- data.frame(percent_pos, num_obs)
+hnames <- (rownames(attr_frame) != 'attrition&TRUE' & rownames(attr_frame) != 'attrition&FALSE')
+attr_frame <- attr_frame[hnames,]
+high_prob <- subset(attr_frame, percent_pos > overall_ratio)
+high_prob$ratio_delta = high_prob$percent_pos - overall_ratio
+hnames <- (rownames(high_prob) != 'attrition&TRUE' & rownames(high_prob) != 'attrition&FALSE')
+high_prob <- high_prob[hnames,]
+print('Factors with the highest attrition rates:')
+head(high_prob[order(-high_prob$ratio_delta),], 15)
+```
+
+* We see that Sales Representatives is the group with the highest leaving rate. All other job roles had attrition rates less than 26%, compared to the sales representative rate of 40%. 
+* The next 3 highest groups are young people with little experience, both in working years and at the company. These three groups are not independent.
+* A high number of people leave at 0 years with their current manager. This could be related to inexperience/age or incompatibility with the manager.
+* People with low salaries leave at a higher rate. This again could be confounded in age/experience.
+
+This paints a clear picture of the employee that is most likely to quit: A young Sales Representative that is new at the company and is making less than $2700 a month.
+
+Overtime is one of the variables strongly correlated with quitting. Because it is possibly the easiest to manage, we will examine it first.
+
+```{r}
+OverTime_attrit <- Attrition_prop_table( 'overtime',data)
+ggplot(OverTime_attrit, aes(x=attrition, y=value, fill= factor(overtime))) + 
+    geom_bar(position = "fill",stat = "identity", width = 0.7) +
+    labs(title = 'Attrition Rate by Overtime', y='Proportion of Response', x='Attrition') +
+    guides(fill=guide_legend(title="Overtime"))+
+    theme(legend.title=element_text(size = 9),plot.title=element_text(hjust=0.5))
+```
+
+* A bit over 50% of those who quit are working overtime, compared to less than 25% of those who did not quit.
+
+We saw earlier that young employees and Sales Representatives are quitting at high rates.
+
+```{r}
+print('Attrition rate of sales representatives between 18 and 27 years of age:')
+    mean(data_binned[data_binned$age == '[18,27)' & data_binned$jobrole == 'Sales Representative','attrition'])
+print('Attrition rate of sales representatives older than 27:')
+    mean(data_binned[data_binned$age != '[18,27)' & data_binned$jobrole == 'Sales Representative','attrition'])
+print('Attrition rate of employees age 18-27 that are not Sales Representatives:')
+    mean(data_binned[data_binned$age == '[18,27)' & data_binned$jobrole != 'Sales Representative','attrition'])
+print('Attrition Rate of Sales Representatives Working Overtime:')
+mean(data_binned[data_binned$overtime == 'Yes' & data_binned$jobrole == 'Sales Representative','attrition'])
+print('Attrition Rate of Employees Working Overtime (Excluding Sales Representatives:')
+mean(data_binned[data_binned$overtime == 'Yes' & data_binned$jobrole != 'Sales Representative','attrition'])
+```
+57% of sales representatives between 18 and 27 years of age quit. This is almost twice the rate of their peers and other sales representatives outside of that age group.
+Overtime may contribute to the sales representatives quitting. 67% of sales reps working overtime quit, compared to 28% across all other roles. 
+
+```{r}
+print('Proportion of Employees that quit that made less than $2318 monthly (excluding Sales Rep\'s):')
+    mean(data_binned[data_binned$monthlyincome == "[ 1009, 2318)" & data_binned$jobrole != 'Sales Representative','attrition'])
+print('Proportion of Employees that quit that made between $2318 and $2696 monthly (excluding Sales Rep\'s):')
+    mean(data_binned[data_binned$monthlyincome == "[ 2318, 2696)" & data_binned$jobrole != 'Sales Representative','attrition'])
+```
+Because we have already identified the high rate of attrition of sales representatives, we excluded them from income level analysis. We see that for other job roles, high attrition is still a problem for lower-paid workers. Interestingly, the employees in the 10-20th percentile of monthly income have a higher rate of attrition than the lowest 10%. 
+
+One of the largest groups with a high attrition rate shown above is those who are single, with 470 employees reported. 
+
+```{r}
+MariStat_attrit <- Attrition_prop_table( 'maritalstatus',data)
+ggplot(MariStat_attrit, aes(x=attrition, y=value, fill= factor(maritalstatus))) + 
+    geom_bar(stat = "identity", width = 0.7) +
+    labs(title = 'Attrition Rate by Marital Status', y='Proportion of Response', x='Attrition') +
+    guides(fill=guide_legend(title="Marital\nStatus"))+
+    theme(legend.title=element_text(size = 9),plot.title=element_text(hjust=0.5))
+print('Proportion of Employees that quit that are younger than 27 and single:')
+mean(attrified$maritalstatus== 'Single' & attrified$age =='[18,27)')/mean(attrified$maritalstatus== 'Single')
+```
+* A majority of those who quit are single, but are only 25% of employees who did not quit are single.
+* 30% of single employees that quit were less than 27 years old, compared to 11% of the employees surveyed. This variable also seems (partially) confounded with age.
+
+Employees with a job involvement score of 1 also have relatively high attrition rates.
+```{r}
+
+JobInvol_attrit <- Attrition_prop_table( 'jobinvolvement',data)
+ggplot(JobInvol_attrit, aes(x=attrition, y=value, fill= factor(jobinvolvement))) + 
+    geom_bar(stat = "identity", width = 0.7) +
+    labs(title = 'Attrition Rate by Job Involvement', y='Proportion of Response', x='Attrition') +
+    guides(fill=guide_legend(title="Job\nInvolvement"))+
+    theme(legend.title=element_text(size = 9),plot.title=element_text(hjust=0.5))
+print('Proportion of Employees that quit that are older than 27 with Very Low Job Involvement:')
+mean(attrified$jobinvolvement=='1' & attrified$age =='[18,27)')/mean(attrified$jobinvolvement=='1')
+```
+* Employees with a Job Involvement score of 1 have a much higher rate of quitting relative to other scores.
+* 21% of employees that quit with a Job Involvement score of 1 were under the age of 27. While this is lower proportion than those who are single, it appears that low job involvement may still be confounded with age. 
+
+It is also important to examine what factors are associated with not quitting.
+
+```{r}
+print('Factors with the lowest attrition rates:')
+head(attr_frame[order(attr_frame$percent_pos),], 10)
+```
+
+* Research Directors have an incredibly low rate of attrition.
+* Employees in the highest income bracket rarely quit.
+* Employees that have worked the same role with the same manager for about a decade rarely quit.
+
+Many of these attributes are likely correlated.
+
+But first we are going to have to generate our dummy varaibles across the main dataset.
+
+
+```{r}
+print('Covariance of factors with high attrition rates:')
+# Generate covariance matrix for all high attrition attributes.
+over_30 <- subset(high_prob, percent_pos > .30)
+data_dummy <- make_dummy(data_binned)
+covar_30 <- find_covariance(data_dummy , rownames(over_30))
+head(covar_30[order(covar_30,decreasing = TRUE)],10)
+```
+
+* Age, years at the company, and total working years and income are pairwise weakly correlated. 
+* Because these are correlated with one another, this provides a small subset of workers that should be focused on retaining in order to decrease attrition. 
+
+* Just for fun, let's see if we can find the most commonly correlated variables throughout the table
+
+```{r}
+all_covar <- find_covariance(data_dummy, names(data_dummy))
+print('Number of covariant pairs:')
+length(all_covar)
+```
+
+* since it would be hard to look at all 10,455 covariant pairs, we will look at the histogram to see where most pairs lie
+
+```{r}
+hist(all_covar, breaks=50, main = 'Histogram of all Covariance values', xlab = 'Covariance')
+```
+
+
+* It looks like most of our variables are independent of the others.  It is possible the surge in perfect correlation at the top is just due to groups with very small counts; so it's probably not worth looking much in to, we will examine some of the other items with a correlation of .6 or higher.
+
+```{r}
+print('Highest Covariances:')
+head(all_covar[all_covar > .60 & all_covar < .999], 25)
+print('Performance Rating = 3 Response Rate:')
+sum(data_dummy[,'performancerating&3']) / 1470
+print('Number of Performance Rating = 3 Responses:')
+print(sum(data[,'performancerating'] == 3))
+print('Number of Employees with Performance Rating of 3 that quit:')
+sum(data[,'performancerating'] == 3 & data_binned[,'attrition'] == TRUE)
+```
+
+* It seems like there's a whole lot of fields which are highly correlated with a performance rating and a work life balance of 3.  Perhaps this is an indicator that a performance rating of 3 means very little.  In fact, it looks like 84% of all employees surveyed had a performance rating of 3. Additionally, 16 percent of employees with a performance rating of 3 quit, which is nearly exactly in line with the population estimate.  Overall, this variable provides no significant information.
+* Many of these high covariances are related to employee count, standard hours, and rarely travelling for business. These are all variables in which a large number of employees have the same value, so unfortunately they provide little information.
+
+
+Let's take a look at enviroment satisfaction. While it did not appear in the highest covariance list, high environment satisfaction should be part of a healthy work environment. Because employees spend so much time at work, it could be a significant factor that was simply masked by the thousands of other covariate pairs. Extended time in a bad environment could also negatively impact job performance.
+
+```{r}
+
+EnvSatTest_attrit <- Attrition_prop_table('environmentsatisfaction', data)
+OverTime_attrit <- Attrition_prop_table( 'overtime',data)
+years_worked_attrit <- Attrition_prop_table('totalworkingyears', data_binned)
+
+ggplot(EnvSatTest_attrit, aes(x=attrition, y=value, fill= factor(environmentsatisfaction))) + 
+    geom_bar(position = "fill",stat = "identity", width = 0.7) +
+    labs(title = 'Attrition Rate by\nEnvironment Satisfaction', y='Proportion of Response', x='Attrition') +
+    guides(fill=guide_legend(title="Environment \nSatisfaction"))+
+    theme(legend.title=element_text(size = 9),plot.title=element_text(hjust=0.5))
+
+
+```
+* About 40% of employees who have not quit give an unfavorable environment satisfaction rating. 
+* It appears that employees that quit are expected to have lower Environment Satisfaction than those who do not quit, but the distributions are not very different.
+* Employees who quit give a rating of 1 at roughly twice the rate of employees who do not quit. 
+It is reasonable to suspect that Environment Satisfaction is correlated with overall happiness at work, so we would like to examine other factors that are correlated with Environment Satisfaction.
+
+```{r}
+data_binned[,'environmentsatisfaction'] <- data['environmentsatisfaction'] < 3
+infl <- check_label_corelation(data_binned, 'environmentsatisfaction', '&', sd_ratio=.75)
+head(infl)
+```
+
+* It looks the the features most highly correlated with environment satisfaction are a high monthly salary, having worked at one other company before, being at a company for a long time, feeling involved at your company, and having quit your job.  It seems to also help if you are a research director.
+
+
+Because age was related to attrition rate, we would also like to examine education level to determine whether there are any trends there.
+```{r}
+education_attrit <- Attrition_prop_table('education', data)
+ggplot(education_attrit, aes(x=attrition, y=value, fill= factor(education))) + 
+    geom_bar(position = "fill",stat = "identity", width = 0.7) +
+    labs(title = 'Attrition Rate by\nEducation', y='Proportion of Response', x='Attrition') +
+    guides(fill=guide_legend(title="Education \nLevel"))+
+    theme(legend.title=element_text(size = 9),plot.title=element_text(hjust=0.5))
+```
+
+* There seems to be no significant relationship between education level and attrition. This is good news, as the education level of the company remains high.
+* Looking at the education levels of employees in the company, 31 percent of those surveyed do not have a Bachelor's degree (Education Level < 3), and 30 percent have a masters degree or higher (Education Level > 3). We are going to make the split at University level (so all employees with a Bachelor's degree or higher will be associated with the label TRUE)
+
+
+```{r}
+data_binned[,'education'] <- data['education'] > 2
+infl <- check_label_corelation(data_binned, 'education', '&', sd_ratio=.6)
+print('Covariances with Bachelor\'s+ Education Level')
+head(infl, 10)
+```
+
+
+* The most interesting thing  here is that it seems many employees in HR have similar education levels. Closer examination indicates that most of these employees have at least a Bachelor's degree.  
+* Similarly, working for multiple companies is correlated with education. Closer examination again indicates that these many of these employees have at least a Bachelor's degree.
+
+We would also like to examine how life outside of work may influence an employee's decision to quit. We will specifically look at relationship satisfaction and work-life balance for employees. 
+
+```{r}
+print('Overall Relationship Satisfaction for All Employees')
+prop.table(table(data$relationshipsatisfaction))
+rel_sat_attrit <- Attrition_prop_table('relationshipsatisfaction', data)
+ggplot(rel_sat_attrit, aes(x=attrition, y=value, fill= factor(relationshipsatisfaction))) + 
+    geom_bar(position = "fill",stat = "identity", width = 0.7) +
+    labs(title = 'Attrition Rate by\nRelationship Satisfaction', y='Proportion of Response', x='Attrition') +
+    guides(fill=guide_legend(title="Relationship \n Satisfaction"))+
+    theme(legend.title=element_text(size = 9),plot.title=element_text(hjust=0.5))
+```
+
+* Moving onto relationship satisfaction, it looks like 60% of people claim to be happy in thier relationship, so we will split this variable at the same place we've split the last two.  In this case we will say True if a relationship is at least a level 3 in satisfaction (or higher).
+* In terms of attrtion, relationship satisfaction appears unrelated. Employees with a relationship satisfaction rating of 1 do quit at a slightly higher rate, however.
+
+```{r}
+data_binned[,'relationshipsatisfaction'] <- data['relationshipsatisfaction'] > 2
+infl <- check_label_corelation(data_binned, 'relationshipsatisfaction', '&', sd_ratio=.5)
+print('Covariances with Positive Relationship Satisfaction:')
+head(infl,10)
+print('Human Resources Relationship Satisfaction:')
+table(data_binned[data_binned$jobrole == 'Human Resources','relationshipsatisfaction'])
+print('Second Year Employee Relationship Satisfaction:')
+table(data_binned[data_binned$yearsincurrentrole == ' 1','relationshipsatisfaction'])
+print('Journeyman Employee Relationship Satisfaction:')
+table(data_binned[data_binned$numcompaniesworked == 7 | data_binned$numcompaniesworked == 8,'relationshipsatisfaction' ])
+```
+
+* Once again human resources is right there at the top of our list both in job role, department, and education field, so apparently everyone in our test set who works in eduacation has a bachelors degree or higher, and is in a happy relationship.  There is also evidence that being happy in a relationship is not correlated with how loyal you are to your job, as employees who have worked at 8 comapnies seem to be happy in thier relationship.
+
+```{r}
+data_binned[,'relationshipsatisfaction'] <- data['relationshipsatisfaction'] > 3
+infl <- check_label_corelation(data_binned, 'relationshipsatisfaction', '&', sd_ratio=.7)
+print('Covariances with Very High Relationship Satisfaction:')
+head(infl)
+```
+
+* An interesting observation when we only count those who give a relationship satisfaction as 'very high' is that HR disappears from the top of our list.  Correlation in general drops significantly, for example employees with 1 year in their current role drops from 0.737 to 0.404 when we examine if employees rate their relationship satisfaction 'very high'. 
+
+```{r}
+work_life_attrit <- Attrition_prop_table('worklifebalance', data)
+ggplot(work_life_attrit, aes(x=attrition, y=value, fill= factor(worklifebalance))) + 
+    geom_bar(position = "fill",stat = "identity", width = 0.7) +
+    labs(title = 'Attrition Rate by\nWork-life Balance', y='Proportion of Response', x='Attrition') +
+    guides(fill=guide_legend(title="Work-life \n Balance"))+
+    theme(legend.title=element_text(size = 9),plot.title=element_text(hjust=0.5))
+```
+
+* Moving onto work life balance, it looks like ~70% of employees who do not quit claim to have a good work-life balance, compared to ~65% of those who quit.
+* While work-life balance does not predict attrition well, employees with very poor work-life balance are more likely to quit.
+```{r}
+data_binned[,'worklifebalance'] <- data['worklifebalance'] > 3
+infl <- check_label_corelation(data_binned, 'worklifebalance', '&', sd_ratio=.7)
+print('Covariances with Positive Work-Life Balance:')
+head(infl)
+```
+
+* The correlation with work-life balance is not very strongly correlated with other, unlike the other variables examined.
+* Interestingly, HR again appears as the Job Role most correlated with this variable.
+
+From the limited data we have, life outside of the office does not appear to influence attrition in a significant way. But employees that provide very low ratings in these metrics do have a slightly higher rate of quitting.
+
+## Conclusion
+
+* Sales representatives and young, new employees have the highest turnover.
+* A disporoportionate number of people that quit worked overtime.
+* Many groups with high attrition rates are disproportionately young.
+* We have a loyal employee base. People who work here a long time often stay. 
+* Life of employees outside of the office does not appear strongly related to attrition.
+
+
+# APPENDIX (Classification Model)
+
+## Linear Model For Predicting Employee Retention
+
+* We are going to try to build a model using linear regression.  Since linear regression isn't typically used for classification, we will be coxing the model into making predictions.  Since the source code for this operation gets a little cumbersome, it it will retained in the source directory.
+
+* The goal is to change the label value to have a score from 0-100 (since all labels are binary, they will either be 1 or 100).  We will then use some of the feature generation techniques to collect some variables we may find interesing.  Then, using a train-test-split, we will test our model against a reserved subset of the data-set.
+
+* Since the goal is classification, we will be using a threshold value to measure model performance.  The other hyper-parameter we will be tuning is the percentage of total variables we will be using in the dataframe.  Both of these values with thier predictive outputs are plotted below.
+
+```{r}
+data <- read.csv('data/CaseStudy2-data.csv')
+data$Department <- revalue(data$Department, c('Human Resources' = 'Human Resources', 'Research & Development'='Research/Development', 'Sales'='Sales'))
+describe_data <- read.csv('data/CaseStudy2-descriptions.csv')
+#names(describe_data) <- (names(describe_data), tolower)
+names(data) <- sapply(names(data), tolower)
+source('src/deason_functions.R')
+threslist <- c()
+m_perf <- c()
+att_data <- data
+att_data$attrition <- data$attrition == 'Yes'
+for(ivar in 10:95){
+  sub_df <- gen_train_frame(att_data, 'attrition')
+  reg_df <- subset_use_cols(data_binned, sub_df, 'attrition', min_qt=0.39)
+  dfd <- featurize_frame(reg_df, 'attrition')
+  fit <- lm(attrition~. , data=dfd[dfd[,'train'] == TRUE,])
+  df.te <- but_I_regress(dfd, fit, 'attrition', thres=ivar)
+  perf <- sum((df.te[,'correct']) / dim(df.te)[1])[1]
+  m_perf <- append(m_perf, perf)
+  threslist <- append(threslist, ivar)
+}
+
+out_vars <- data.frame(threslist, m_perf)
+row.names(out_vars) <- threslist
+```
+
+#### Plot of model accuracy vs percentage of variables included in the frame
+
+```{r}
+out_vars[out_vars[,'m_perf'] == max(out_vars[,'m_perf']),]
+ggplot(data=out_vars, aes(x=threslist, y=m_perf)) + geom_point()
+```
+
+
+
+```{r}
+varquant <- c()
+m_perf <- c()
+for(ivar in 10:95 / 100){
+  sub_df <- gen_train_frame(att_data, 'attrition')
+  reg_df <- subset_use_cols(data_binned, sub_df, 'attrition', min_qt=ivar)
+  dfd <- featurize_frame(reg_df, 'attrition')
+  #names(dfd)
+  fit <- lm(attrition~. , data=dfd[dfd[,'train'] == TRUE,])
+  df.te <- but_I_regress(dfd, fit, 'attrition', thres=74)
+  perf <- sum((df.te[,'correct']) / dim(df.te)[1])[1]
+  m_perf <- append(m_perf, perf)
+  varquant <- append(varquant, ivar)
+}
+
+vqnt.df <- data.frame(varquant, m_perf)
+row.names(vqnt.df) <- varquant
+```
+
+
+#### Plot of model accuracy vs threshold value
+
+```{r}
+row.names(vqnt.df) <- varquant
+#vqnt.df[vqnt.df[,m_perf] == max(vqnt.df[,m_perf])]
+print(vqnt.df[vqnt.df[,'m_perf'] == max(vqnt.df[,'m_perf']),])
+ggplot(data=vqnt.df, aes(x=varquant, y=m_perf)) + geom_point()
+```
+
+* Unfortunatly, It doesn't look like adding and subtracting variables has any effect on model performance; which is a little weird, but the chart above seems to show a completley random cloud; so our final model is about 55% accurate at measuring employee retention; which is probably an indication that it just doesn't make a whole lot of sese to use linear-regression for classification.
+
+### Linear model For Prediciting Employee Education Level
+
+* Fully aware that our model doesn't seem to work, we decided it wouldn't hurt to try to model another factor.  This time we are going to try to predict if an employee has a pHD.
+
+```{r}
+varquant <- c()
+m_perf <- c()
+df_ed <- data
+df_ed$education <- data$education == 4
+for(ivar in 10:95 / 100){
+  sub_df <- gen_train_frame(df_ed, 'education')
+  reg_df <- subset_use_cols(data_binned, sub_df, 'education', min_qt=ivar)
+  dfd <- featurize_frame(reg_df, 'education')
+  fit <- lm(education~. , data=dfd[dfd[,'train'] == TRUE,])
+  df.te <- but_I_regress(dfd, fit, 'education', thres=74)
+  perf <- sum((df.te[,'correct']) / dim(df.te)[1])[1]
+  m_perf <- append(m_perf, perf)
+  varquant <- append(varquant, ivar)
+}
+
+vqnt.df <- data.frame(varquant, m_perf)
+row.names(vqnt.df) <- varquant
+```
+## plot of model accuracy vs percentage of variables included in the frame
+
+```{r}
+vqnt.df <- data.frame(varquant, m_perf)
+#out_vars[out_vars[,'m_perf'] == max(out_vars[,'m_perf']),]
+ggplot(data=vqnt.df, aes(x=varquant, y=m_perf)) + geom_point()
+```
+
+
+
+```{r}
+threslist <- c()
+m_perf <- c()
+for(ivar in 10:95){
+  sub_df <- gen_train_frame(df_ed, 'education')
+  reg_df <- subset_use_cols(data_binned, sub_df, 'education', min_qt=.60)
+  dfd <- featurize_frame(reg_df, 'education')
+  fit <- lm(education~. , data=dfd[dfd[,'train'] == TRUE,])
+  df.te <- but_I_regress(dfd, fit, 'education', thres=ivar)
+  perf <- sum((df.te[,'correct']) / dim(df.te)[1])[1]
+  m_perf <- append(m_perf, perf)
+  threslist <- append(threslist, ivar)
+}
+
+out_vars <- data.frame(threslist, m_perf)
+row.names(out_vars) <- threslist
+```
+
+## Plot of model accuracy vs threshold value
+
+```{r}
+print(out_vars[out_vars[,'m_perf'] == max(out_vars[,'m_perf']),])
+ggplot(data=out_vars, aes(x=threslist, y=m_perf)) + geom_point()
+```
+
+* This looks like a nail in the coffin for linear-regression as a classifier.  Our model for predicting if an employee has a pHD is exactly as good as flipping a coin.
