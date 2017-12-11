@@ -304,12 +304,42 @@ mean(data_binned[data_binned$overtime == 'Yes' & data_binned$jobrole != 'Sales R
 Overtime may contribute to the sales representatives quitting. 67% of sales reps working overtime quit, compared to 28% across all other roles. 
 
 ```{r}
-print('Attrition rate of employees making less than $2318 monthly (excluding Sales Rep\'s):')
+print('Proportion of Employees that quit that made less than $2318 monthly (excluding Sales Rep\'s):')
     mean(data_binned[data_binned$monthlyincome == "[ 1009, 2318)" & data_binned$jobrole != 'Sales Representative','attrition'])
-print('Attrition rate of employees making between $2318 and $2696 monthly (excluding Sales Rep\'s):')
+print('Proportion of Employees that quit that made between $2318 and $2696 monthly (excluding Sales Rep\'s):')
     mean(data_binned[data_binned$monthlyincome == "[ 2318, 2696)" & data_binned$jobrole != 'Sales Representative','attrition'])
 ```
 Because we have already identified the high rate of attrition of sales representatives, we excluded them from income level analysis. We see that for other job roles, high attrition is still a problem for lower-paid workers. Interestingly, the employees in the 10-20th percentile of monthly income have a higher rate of attrition than the lowest 10%. 
+
+One of the largest groups with a high attrition rate shown above is those who are single, with 470 employees reported. 
+
+```{r}
+MariStat_attrit <- Attrition_prop_table( 'maritalstatus',data)
+ggplot(MariStat_attrit, aes(x=attrition, y=value, fill= factor(maritalstatus))) + 
+    geom_bar(stat = "identity", width = 0.7) +
+    labs(title = 'Attrition Rate by Marital Status', y='Proportion of Response', x='Attrition') +
+    guides(fill=guide_legend(title="Marital\nStatus"))+
+    theme(legend.title=element_text(size = 9),plot.title=element_text(hjust=0.5))
+print('Proportion of Employees that quit that are younger than 27 and single:')
+mean(attrified$maritalstatus== 'Single' & attrified$age =='[18,27)')/mean(attrified$maritalstatus== 'Single')
+```
+* A majority of those who quit are single, but are only 25% of employees who did not quit are single.
+* 30% of single employees that quit were less than 27 years old, compared to 11% of the employees surveyed. This variable also seems (partially) confounded with age.
+
+Employees with a job involvement score of 1 also have relatively high attrition rates.
+```{r}
+
+JobInvol_attrit <- Attrition_prop_table( 'jobinvolvement',data)
+ggplot(JobInvol_attrit, aes(x=attrition, y=value, fill= factor(jobinvolvement))) + 
+    geom_bar(stat = "identity", width = 0.7) +
+    labs(title = 'Attrition Rate by Job Involvement', y='Proportion of Response', x='Attrition') +
+    guides(fill=guide_legend(title="Job\nInvolvement"))+
+    theme(legend.title=element_text(size = 9),plot.title=element_text(hjust=0.5))
+print('Proportion of Employees that quit that are older than 27 with Very Low Job Involvement:')
+mean(attrified$jobinvolvement=='1' & attrified$age =='[18,27)')/mean(attrified$jobinvolvement=='1')
+```
+* Employees with a Job Involvement score of 1 have a much higher rate of quitting relative to other scores.
+* 21% of employees that quit with a Job Involvement score of 1 were under the age of 27. While this is lower proportion than those who are single, it appears that low job involvement may still be confounded with age. 
 
 It is also important to examine what factors are associated with not quitting.
 
@@ -493,5 +523,6 @@ From the limited data we have, life outside of the office does not appear to inf
 
 * Sales representatives and young, new employees have the highest turnover.
 * A disporoportionate number of people that quit worked overtime.
+* Many groups with high attrition rates are disproportionately young.
 * We have a loyal employee base. People who work here a long time often stay. 
 * Life of employees outside of the office does not appear strongly related to attrition.
