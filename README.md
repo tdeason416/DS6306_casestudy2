@@ -9,6 +9,7 @@ Group Members:
 Files:
 case_study_2_Final_with_regression.md <- contains project overview
 case_study_2_Final_with_regression.RMD <- contains code for project
+CaseStudy2_6306.Rproj <- contains enviroment variables needed
 src/deason_functions.R <- contains code used for regression model
 case_study_2_Final_with_regression_files/  <- contains images needed for project report
 source/employee.R <- additional data used in analysis
