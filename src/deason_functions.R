@@ -41,7 +41,7 @@ find_number_observations <- function(df, sep='&', check_na=FALSE){
     return(num_obs)
 }
 
-make_dummy <- function(df, sep='&'){
+make_dummy <- function(df, sep='&', subcols=c(), drop_others=FALSE){
     # Convert dataframe with all catagorical data into all boolean dataframe
     # --------
     # INPUTS
@@ -49,13 +49,21 @@ make_dummy <- function(df, sep='&'){
     #     -   Data should all be catagorical.
     # sep: str
     #     -   Character to use as seperator between column and value
+    # thecols: bool or array
+    #   -   subset of all columns which contain columns to make_dummy   
     # --------
     # RETURNS
     # dfo: data.frame
     #     -   all data is bool
     dfo <- df
-    for(col in names(df)){
-        for(val in unique(dfo[,col])){
+    if(length(subcols) == 0){
+        subcols = names(df)
+        }
+    if(drop_others){dfo <- dfo[,subcols]}
+    # print(head(dfo[,subcols]))
+    for(col in subcols){
+        vals <- unique(dfo[,col])
+        for(val in vals[2:length(vals)]){
             dfo[, paste(col, val, sep=sep)] = dfo[, col] == val
             }
         dfo = dfo[, names(dfo) != col]
@@ -115,6 +123,23 @@ bin_columns <- function(data, min_size=100, num_splits){
     return(data_binned)
     }
 
+make_balanced_df <- function(df, label){
+    train_1 <- sample(c(TRUE, FALSE), dim(df)[1], replace=TRUE, prob=c(.8, .2))
+    tdf <- subset(df, label != 0)
+    sub_data <- subset(df, label == 0)
+    df_bal <-rbind(tdf, sample_n(sub_data, dim(tdf)[1], replace=FALSE))
+    return(df_bal <-rbind(tdf, sample_n(sub_data, dim(tdf)[1], replace=FALSE)))
+}    
+
+
+train_bool_arrays <- function(df, label, test_percent=.2, num_frames=5, rand_seed=42){
+    tp <- test_percent
+    set.seed(rand_seed)
+    df_bal <- make_balanced_df(df, label)
+    df_bal['train'] = sample(c(TRUE, FALSE), dim(df_bal)[1], replace=TRUE, prob=c(1-tp, tp))
+return(df_bal)
+}
+
 
 check_label_corelation <- function(df, label, dsep='&', sd_ratio=1){
 ## function to generate top contributing variables to a specific label
@@ -131,7 +156,6 @@ check_label_corelation <- function(df, label, dsep='&', sd_ratio=1){
 ## coors: named_vector
 ##  -   contains coorelation rate for each value in the df
     all_pos <- sum(df[,label] == TRUE) / dim(df)[1]
-    print(all_pos)
     num_obs <- find_number_observations(df, sep=dsep)
     percent_pos <- find_percent(df, label, num_obs, sep=dsep)
     label_frame <- data.frame(percent_pos, num_obs)
@@ -144,12 +168,65 @@ check_label_corelation <- function(df, label, dsep='&', sd_ratio=1){
 }
 
 
+but_I_regress <-function(df, model, label, thres=50, dsep='&'){
+    ##
+    ##
+    ##
+    ##
+    df.te <- df[df[,'train'] == FALSE,]
+    df.te[,'predicted'] <- predict(fit, df.te[,names(dfd) != label])
+    df.te['posi'] <- df.te['predicted'] > thres
+    df.te['correct'] <- df.te['posi'] == df.te[label]
+    return(df.te)
+    #error = sum((dfd[, label] - dfd[,'predicted'])**2)
+    # sqrt(error / dim(dfd[,names(dfd) != label])[1])
 
+}
 
+featurize_frame <- function(df, label, csep='&'){
+    snam <- names(df)
+    no_labs <- df[,snam[(snam != label & snam != 'train')]]
+    types <- sapply(no_labs, class)
+    cat_cols <- names(types)
+    idx = 1
+    for(col in names(types)){
+        if(types[[col]] == 'integer'){
+            cat_cols = cat_cols[cat_cols != col]
+            df[,col] = df[,col] / max(df[,col])
+            }
+        }
+    dfd <- make_dummy(df, subcols=cat_cols)
+    #dfd[,label] <- df[,label]
+    #dfd[,'train'] <- df[,'train']
+    return(dfd)
+    }
+
+gen_train_frame <- function(df, label, ptest=.2){
+    # df[,label]  <- df[,label] == TRUE
+    df[,label]  <- df[,label] * 100
+    tdf <- df[df[,label] != 0,]
+    sub_data <- df[df[,label] == 0,]
+    df_bal <- rbind(tdf, sample_n(sub_data, dim(tdf)[1], replace=FALSE))
+    df_bal$train <- sample(c(TRUE, FALSE), 
+                    dim(df_bal)[1], 
+                    replace=TRUE, 
+                    prob=c(1-ptest, ptest))
+    return(df_bal)
+}
+
+subset_use_cols <- function(df, train_frame, label, min_qt=.75, csep= '&'){
+    infl <- check_label_corelation(data_binned, label, '&')
+    infl$percent_sq <- infl$percent_pos ** 2
+    min_inf <- quantile(infl$percent_sq, min_qt)
+    alls <- subset(infl, percent_sq >= min_inf)
+    tups <- str_split(row.names(alls), pattern=csep)
+    first_cell <- function(x){x[1]}
+    use_cols <- unique(sapply(tups, first_cell))
+    return(train_frame[,append(use_cols, c(label, 'train'))])
+}
 
 Attrition_prop_table <- function(variable_name, data.f){
     # Generates a table containing proportion of responses for both Attrition values. This should allow us to examine values in the context of whether they attrified.
-    
     # Generate a table containing variable/Attrition rates
     prop <-prop.table(xtabs(as.formula(paste( '~ ',paste(variable_name, 'attrition ', sep = ' + '))) , data=data.f))
     
