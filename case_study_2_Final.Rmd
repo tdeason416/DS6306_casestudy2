@@ -179,7 +179,7 @@ Attrition_prop_table <- function(variable_name, data.f){
 ```
 ## Introduction
 
-We are performing exploratory data analysis for a Fortune 1000 company. We are examining employee attrition with the goal of identifying key factors that contribute to attrition. Factors that prevent attrition will also be examined. The data used was provided by the company and includes information on 1470 full-time employees.  Including attrition, a total of 35 variables were measured for each employee. All data entries were complete. (No N/A's in the dataset.) This included numeric data such as age and income as well as categorical data such as their roles and department they work in. 
+We are performing exploratory data analysis for a Fortune 1000 company. We are examining employee attrition with the goal of identifying key factors that contribute to attrition. Factors that prevent attrition will also be examined. The data used was provided by the company and includes information on 1470 full-time employees. Including attrition, a total of 35 variables were reported for each employee. All data entries were complete. (No N/A's in the dataset.) This included numeric data such as age and income as well as categorical data such as their roles and department they work in. 
 
 ## Project Goals
 
@@ -303,13 +303,43 @@ mean(data_binned[data_binned$overtime == 'Yes' & data_binned$jobrole != 'Sales R
 57% of sales representatives between 18 and 27 years of age quit. This is almost twice the rate of their peers and other sales representatives outside of that age group.
 Overtime may contribute to the sales representatives quitting. 67% of sales reps working overtime quit, compared to 28% across all other roles. 
 
+Because Sales Representative was so strongly associated with attrition, we would like to examine any trends in other job roles.
+
 ```{r}
-print('Proportion of Employees that quit that made less than $2318 monthly (excluding Sales Rep\'s):')
-    mean(data_binned[data_binned$monthlyincome == "[ 1009, 2318)" & data_binned$jobrole != 'Sales Representative','attrition'])
-print('Proportion of Employees that quit that made between $2318 and $2696 monthly (excluding Sales Rep\'s):')
-    mean(data_binned[data_binned$monthlyincome == "[ 2318, 2696)" & data_binned$jobrole != 'Sales Representative','attrition'])
+JobRole_attrit <- Attrition_prop_table( 'jobrole',data)
+ggplot(JobRole_attrit, aes(x=attrition, y=value, fill= factor(jobrole))) + 
+    geom_bar(position = "fill",stat = "identity", width = 0.7) +
+    labs(title = 'Attrition Rate by Job Role', y='Proportion of Response', x='Attrition') +
+    guides(fill=guide_legend(title="Job Role"))+
+    theme(legend.title=element_text(size = 9),plot.title=element_text(hjust=0.5))
 ```
-Because we have already identified the high rate of attrition of sales representatives, we excluded them from income level analysis. We see that for other job roles, high attrition is still a problem for lower-paid workers. Interestingly, the employees in the 10-20th percentile of monthly income have a higher rate of attrition than the lowest 10%. 
+
+* Laboratory Technician is another Job Role with relatively high turnover. 
+
+```{r}
+print('Attrition rate of Laboratory Technician between 18 and 27 years of age:')
+    mean(data_binned[data_binned$age == '[18,27)' & data_binned$jobrole == 'Laboratory Technician','attrition'])
+print('Attrition rate of Laboratory Technician older than 27:')
+    mean(data_binned[data_binned$age != '[18,27)' & data_binned$jobrole == 'Laboratory Technician','attrition'])
+print('Attrition rate of employees age 18-27 that are not Laboratory Technicians or Sales Representatives:')
+    mean(data_binned[data_binned$age == '[18,27)' & data_binned$jobrole != 'Sales Representative' & data_binned$jobrole != 'Laboratory Technician','attrition'])
+print('Attrition Rate of Laboratory Technician Working Overtime:')
+    mean(data_binned[data_binned$overtime == 'Yes' & data_binned$jobrole == 'Laboratory Technician','attrition'])
+print('Attrition Rate of Employees Working Overtime (Excluding Sales Representatives and Laboratory Technician):')
+    mean(data_binned[data_binned$overtime == 'Yes' & data_binned$jobrole != 'Sales Representative' & data_binned$jobrole != 'Laboratory Technician','attrition'])
+```
+
+This makes it clear that young Sales Representatives and Laboratory Technicians have disproportionately high attrition rates. Young Laboratory Technicians quit at a rate about twice that of their older coworkers. These two roles have high attrition rates, even after accounting for age. 
+
+
+
+```{r}
+print('Proportion of Employees that quit that made less than $2318 monthly (excluding Sales Rep\'s and Lab Techs):')
+    mean(data_binned[data_binned$monthlyincome == "[ 1009, 2318)" & data_binned$jobrole != 'Sales Representative' & data_binned$jobrole == 'Laboratory Technician','attrition'])
+print('Proportion of Employees that quit that made between $2318 and $2696 monthly (excluding Sales Rep\'s and Lab Techs):')
+    mean(data_binned[data_binned$monthlyincome == "[ 2318, 2696)" & data_binned$jobrole != 'Sales Representative' & data_binned$jobrole == 'Laboratory Technician','attrition'])
+```
+Because we have already identified the high rate of attrition of Sales Representatives and Lab Techs, we excluded them from income level analysis. We see that for other job roles, high attrition is still a problem for lower-paid workers. Interestingly, the employees in the 10-20th percentile of monthly income have a higher rate of attrition than the lowest 10%. 
 
 One of the largest groups with a high attrition rate shown above is those who are single, with 470 employees reported. 
 
@@ -521,8 +551,10 @@ From the limited data we have, life outside of the office does not appear to inf
 
 ## Conclusion
 
-* Sales representatives and young, new employees have the highest turnover.
+* Sales representatives and Laboratory Technicians are the roles have the highest turnover.
+* Young, new employees generally have higher turnovers.
 * A disporoportionate number of people that quit worked overtime.
+* Single employees have relatively high attrition rates. 
 * Many groups with high attrition rates are disproportionately young.
 * We have a loyal employee base. People who work here a long time often stay. 
 * Life of employees outside of the office does not appear strongly related to attrition.
